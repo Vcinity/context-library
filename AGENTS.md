@@ -3,13 +3,29 @@
 ## Scope and authority
 
 - These instructions apply to the Context Library code monorepo.
-- Read `SPEC.md` and `HANDOFF.md` before changing implementation files.
+- Read `SPEC.md` before changing implementation files. Consult
+  `ARCHITECTURE.md`, `README.md`, and the relevant package or test
+  documentation when the change crosses a component boundary.
 - Treat `SPEC.md` as the implementation authority when source repositories
   disagree.
 - Do not apply an unrelated product project pack to this monorepo.
 - No applicable canonical Context Library project pack exists for this
   monorepo at present. Do not infer one from the presence of the Plugin or the
   availability of a shared library.
+
+## Context Manager suite isolation
+
+- When working specifically on the Context Manager suite—including
+  `src/context_library_manager`, `frontend`, Manager tests, and Manager
+  end-to-end flows—do not invoke, install, load, or otherwise use the Context
+  Manager plugin.
+- Do not use that plugin's generated projection, MCP server, or session-start
+  behavior as implementation input or test infrastructure for Context Manager
+  work. Use the checked-in source, contracts, fixtures, and deterministic
+  local test doubles instead.
+- This restriction is scoped to Context Manager suite work; it does not
+  prohibit changes to the separately defined, read-only Context Library
+  Plugin when the task explicitly targets that component.
 
 ## Canonical-data boundary
 
@@ -26,4 +42,20 @@
 - Route normal canonical mutations through Manager policy and the typed
   Maintainer service.
 - Keep `clm` as the documented administrative adapter.
-- Run the root validation commands required by `SPEC.md`.
+- Preserve the dependency direction: Core is inward, Maintainer depends on
+  Core, Manager depends on the Maintainer service, and the frontend depends
+  on the Manager API.
+
+## Change and validation requirements
+
+- Keep changes localized, preserve user-owned dirty work, and do not modify
+  the separately governed canonical library unless the user explicitly
+  authorizes it.
+- Use synthetic repositories or temporary copies for mutation and recovery
+  tests. Never commit canonical decision records to this code repository.
+- For code changes, run the narrowest relevant tests first, then run the root
+  validation required by the specification: `make test`, `make check`,
+  `make e2e`, `make smoke`, `make contracts-check`, `make plugin-check`,
+  `make package`, and `git diff --check` as applicable.
+- Report commands that were run, their results, and any omitted validation or
+  external integration limits.
