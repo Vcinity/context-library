@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Library</h1>
+  <p class="meta">Canonical revision {{ snapshot.publication_revision }} · digest {{ snapshot.library_digest[:12] }}</p>
+  {% if can_maintain %}<p><a href="/library/proposals/new">Propose a library change</a></p>{% endif %}
+  <div data-island="library-search" data-project="{{ project }}" data-initial-search="{{ initial_search }}">
+    <section aria-labelledby="results-heading">
+      <h2 id="results-heading">Current decisions</h2>
+      {% if decisions.items %}
+        <div class="decision-grid">
+          {% for item in decisions.items %}
+            <article class="decision-card">
+              <span class="status status--{{ item.status }}">{% if item.status in ["inferred", "assumed"] %}{{ item.status|title }}—not mandatory{% else %}{{ item.status|title }}{% endif %}</span>
+              <h3><a href="/library/decisions/{{ item.decision_id }}">{{ item.subject }}</a></h3>
+              <p>{{ item.decision }}</p>
+              <p class="meta">{{ item.category }} · {{ item.source_count }} sources</p>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}<p>No decisions match this view.</p>{% endif %}
+    </section>
+  </div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header"><div><p class="eyebrow">Singleton service</p><h1>Agent Service</h1></div><p>Operator state and observed worker health.</p></header>
+  <div class="dashboard-grid">
+    <div data-island="agent-service-controls" data-initial='{{ service | tojson }}' data-can-admin="{{ 'true' if can_admin else 'false' }}"><section class="panel"><h2>State</h2><p><span class="status status--{{ service.effective_state }}">{{ service.effective_state }}</span></p><p>Operator state {{ service.operator_state }} · version {{ service.version }}</p><p>Last heartbeat {{ service.last_heartbeat or "not observed" }}</p></section></div>
+    <section class="panel"><h2>Queue</h2>{% if overview.queue %}<ul>{% for state,count in overview.queue.items() %}<li><a href="/agent-service/runs?state={{ state }}">{{ state }}: {{ count }}</a></li>{% endfor %}</ul>{% else %}<p>No queued work.</p>{% endif %}</section>
+  </div>
+  <section class="panel"><h2>Runtime limits</h2><dl><dt>Worker concurrency</dt><dd>{{ service.worker_concurrency }}</dd><dt>Lease</dt><dd>{{ service.lease_seconds }} seconds</dd><dt>Retry limit</dt><dd>{{ service.retry_limit }}</dd><dt>Agent adapter</dt><dd>{% if service.agent_adapter_configured %}Configured{% else %}Not configured{% endif %}</dd><dt>Token usage</dt><dd>{{ service.project_tokens_used }} spent · {{ service.project_tokens_reserved }} reserved of {{ service.project_token_budget }}</dd></dl></section>
+  <p><a href="/agent-service/runs">Inspect all runs and work</a></p>
+{% endblock %}

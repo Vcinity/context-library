@@ -1,0 +1,195 @@
+{
+  "$defs": {
+    "ConflictChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "label"
+      ],
+      "title": "ConflictChoice",
+      "type": "object"
+    },
+    "ConflictResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "choice": {
+          "title": "Choice",
+          "type": "string"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rationale"
+        },
+        "resolution_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resolution Candidate Id"
+        },
+        "resolution_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resolution Source Id"
+        },
+        "resolved_at": {
+          "format": "date-time",
+          "title": "Resolved At",
+          "type": "string"
+        },
+        "resolver": {
+          "title": "Resolver",
+          "type": "string"
+        },
+        "schema": {
+          "const": "context-library/conflict-resolution",
+          "default": "context-library/conflict-resolution",
+          "title": "Schema",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "choice",
+        "resolver",
+        "resolved_at"
+      ],
+      "title": "ConflictResolution",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "candidate_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Candidate Ids",
+      "type": "array"
+    },
+    "canonical_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Canonical Ids",
+      "type": "array"
+    },
+    "choices": {
+      "items": {
+        "$ref": "#/$defs/ConflictChoice"
+      },
+      "title": "Choices",
+      "type": "array"
+    },
+    "conflict_id": {
+      "title": "Conflict Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "question": {
+      "title": "Question",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "recommendation": {
+      "title": "Recommendation",
+      "type": "string"
+    },
+    "resolution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConflictResolution"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "safe_behavior": {
+      "title": "Safe Behavior",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/conflict-packet",
+      "default": "context-library/conflict-packet",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "open",
+        "resolved"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "conflict_id",
+    "project",
+    "status",
+    "created_at",
+    "question",
+    "candidate_ids",
+    "canonical_ids",
+    "reason",
+    "choices",
+    "recommendation",
+    "safe_behavior"
+  ],
+  "title": "ConflictPacket",
+  "type": "object"
+}

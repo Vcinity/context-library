@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "ContextAvailability": {
+      "enum": [
+        "available",
+        "missing",
+        "unreadable",
+        "invalid",
+        "ambiguous",
+        "stale-projection"
+      ],
+      "title": "ContextAvailability",
+      "type": "string"
+    },
+    "ContextRequirement": {
+      "enum": [
+        "required",
+        "optional",
+        "disabled",
+        "undetermined"
+      ],
+      "title": "ContextRequirement",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "availability": {
+      "$ref": "#/$defs/ContextAvailability"
+    },
+    "notice_emitted": {
+      "default": false,
+      "title": "Notice Emitted",
+      "type": "boolean"
+    },
+    "proceeded_without_context": {
+      "default": false,
+      "title": "Proceeded Without Context",
+      "type": "boolean"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "projection_fresh": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Projection Fresh"
+    },
+    "requirement": {
+      "$ref": "#/$defs/ContextRequirement"
+    },
+    "requirement_source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Requirement Source"
+    },
+    "schema": {
+      "const": "context-library/context-resolution",
+      "default": "context-library/context-resolution",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_digest": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Digest"
+    }
+  },
+  "required": [
+    "requirement",
+    "availability"
+  ],
+  "title": "ContextResolution",
+  "type": "object"
+}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header"><div><p class="eyebrow">{{ project }}</p><h1>Review queue</h1></div><p>Oldest unresolved evidence decisions appear first.</p></header>
+  <form class="filter-bar" method="get">
+    <label>Status<select name="status"><option value="">All</option><option value="open"{% if filters.status == "open" %} selected{% endif %}>Open</option><option value="resolved"{% if filters.status == "resolved" %} selected{% endif %}>Resolved</option></select></label>
+    <label>Urgency<select name="urgency"><option value="">All</option>{% for value in ["critical","high","normal","low"] %}<option value="{{ value }}"{% if filters.urgency == value %} selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+    <button type="submit">Filter reviews</button>
+  </form>
+  {% if reviews %}<div class="review-list">{% for review in reviews %}
+    <article class="panel"><span class="status status--{{ review.status }}">{{ review.status }}</span><h2><a href="/reviews/{{ review.id }}">{{ review.question }}</a></h2><p>{{ review.urgency }} urgency · {{ (review.age_seconds / 3600)|round(1) }} hours old · reason {{ review.reason }}</p><p>Work state: {{ review.work.state }}{% if review.owner %} · owner {{ review.owner }}{% endif %}</p></article>
+  {% endfor %}</div>{% else %}<div class="feedback"><strong>Empty</strong><span>No reviews match these filters.</span></div>{% endif %}
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <p><a href="/library">← Library</a></p>
+  <h1>Propose a library change</h1>
+  <p>This creates an evidence-backed proposal. It does not directly change canonical Markdown.</p>
+  <div data-island="proposal-form" data-project="{{ project }}" data-digest="{{ snapshot.library_digest }}" data-decision-id="{{ decision_id }}">
+    <p>JavaScript is required for deterministic preview and proposal submission.</p>
+  </div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "affected_action": {
+      "title": "Affected Action",
+      "type": "string"
+    },
+    "classification": {
+      "enum": [
+        "missing",
+        "unreadable",
+        "invalid",
+        "ambiguous",
+        "stale-projection"
+      ],
+      "title": "Classification",
+      "type": "string"
+    },
+    "fabricated_substitute": {
+      "const": false,
+      "default": false,
+      "title": "Fabricated Substitute",
+      "type": "boolean"
+    },
+    "invitation": {
+      "default": "Provide relevant context if you want it applied.",
+      "title": "Invitation",
+      "type": "string"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "remediation": {
+      "default": "Use the Context Library Manager to create or update canonical context.",
+      "title": "Remediation",
+      "type": "string"
+    },
+    "requirement_source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Requirement Source"
+    },
+    "schema": {
+      "const": "context-library/missing-context-notice",
+      "default": "context-library/missing-context-notice",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "classification",
+    "affected_action"
+  ],
+  "title": "MissingContextNotice",
+  "type": "object"
+}

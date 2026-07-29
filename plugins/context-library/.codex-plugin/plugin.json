@@ -1,0 +1,23 @@
+{
+  "name": "context-library",
+  "version": "0.3.0",
+  "description": "Shared project-intent library for decision registers, provenance, project packs, and reusable Codex guidance.",
+  "author": {
+    "name": "Kevin Barrett"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Context Library",
+    "shortDescription": "Shared project intent for agents and humans",
+    "longDescription": "A reusable Codex plugin for decision registers, provenance notes, supersession chains, project-pack navigation, and shared filesystem distribution.",
+    "developerName": "Kevin Barrett",
+    "category": "Productivity",
+    "capabilities": ["Read", "Interactive"],
+    "defaultPrompt": [
+      "Find the relevant project decisions.",
+      "Explain why a prior choice was made.",
+      "Load the right project pack."
+    ]
+  }
+}

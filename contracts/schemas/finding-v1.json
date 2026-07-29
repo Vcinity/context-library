@@ -1,0 +1,64 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "canonical_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Canonical Ids",
+      "type": "array"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "evidence_observation_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Observation Ids",
+      "type": "array"
+    },
+    "finding": {
+      "enum": [
+        "duplicate",
+        "supersedes",
+        "conflict",
+        "related"
+      ],
+      "title": "Finding",
+      "type": "string"
+    },
+    "reasoning": {
+      "title": "Reasoning",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/finding",
+      "default": "context-library/finding",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "finding",
+    "candidate_id",
+    "confidence",
+    "evidence_observation_ids",
+    "reasoning"
+  ],
+  "title": "Finding",
+  "type": "object"
+}

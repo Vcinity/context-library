@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="panel" aria-live="polite"><h1 tabindex="-1" autofocus>Review resolved</h1><p>The rationale and alternatives were preserved as evidence.</p><p>{% if result.audit_event_id %}<a href="/audit?event_id={{ result.audit_event_id }}">View audit event</a>{% endif %} · <a href="/agent-service/runs?work_id={{ result.work_id }}">View resulting work</a></p></section>
+{% endblock %}

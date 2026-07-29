@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header"><div><p class="eyebrow">{{ project }}</p><h1>Overview</h1></div><p>What needs attention right now.</p></header>
+  <div data-island="overview" data-project="{{ project }}" data-initial-overview="{{ initial_overview }}">
+    <section aria-labelledby="attention-heading">
+      <h2 id="attention-heading">Attention · {{ overview.attention.total }}</h2>
+      <div class="metric-grid">
+        <a class="metric-card" href="/reviews?status=open"><strong>{{ overview.attention.review }}</strong><span>Open reviews</span></a>
+        <a class="metric-card" href="/agent-service/runs?state=failed"><strong>{{ overview.attention.failed }}</strong><span>Failed</span></a>
+        <a class="metric-card" href="/agent-service/runs?state=retryable"><strong>{{ overview.attention.retryable }}</strong><span>Retryable</span></a>
+        <a class="metric-card" href="/agent-service/runs?state=stale"><strong>{{ overview.attention.stale }}</strong><span>Stale</span></a>
+        <a class="metric-card" href="/agent-service/runs?state=waiting-human"><strong>{{ overview.attention.blocked }}</strong><span>Blocked</span></a>
+      </div>
+    </section>
+    <div class="dashboard-grid">
+      <section class="panel"><h2>Lifecycle queue</h2>{% if overview.queue %}<ul>{% for state,count in overview.queue.items() %}<li><a href="/agent-service/runs?state={{ state }}">{{ state }}: {{ count }}</a></li>{% endfor %}</ul>{% else %}<p>No queued work.</p>{% endif %}</section>
+      <section class="panel"><h2>Agent Service</h2><p><span class="status status--{{ overview.agent_service.health }}">{{ overview.agent_service.health }}</span> Operator state: {{ overview.agent_service.state }}</p><p><a href="/agent-service">Inspect service</a></p></section>
+      <section class="panel"><h2>Canonical library</h2><p>Revision {{ overview.library.publication_revision }}</p>{% if overview.last_publication %}<p>Last publication: {{ overview.last_publication.status }} at {{ overview.last_publication.created_at }}</p>{% else %}<p>No publication recorded.</p>{% endif %}<p><a href="/publications">Publication history</a></p></section>
+      <section class="panel"><h2>Autonomy · rolling 30 days</h2><p>{% if overview.autonomy.rate is not none %}{{ (overview.autonomy.rate * 100)|round(1) }}% observed{% else %}No eligible data{% endif %}</p><p>{{ overview.autonomy.numerator }} autonomous / {{ overview.autonomy.denominator }} eligible · {{ overview.autonomy.exclusions }} excluded · target {{ (overview.autonomy.target * 100)|round }}%</p><p>SLO state: {{ overview.autonomy.slo_state }} · history: {{ overview.autonomy.history_status }} · telemetry: {{ overview.autonomy.telemetry_status }}</p>{% if overview.autonomy.slo_state in ["insufficient-history", "insufficient-telemetry"] %}<p>This window is not production SLO evidence.</p>{% endif %}<p>Policy revision {{ overview.autonomy.policy_revision }}</p>{% if overview.autonomy.coverage_gaps %}<details><summary>{{ overview.autonomy.coverage_gaps|length }} telemetry coverage gap(s)</summary><ul>{% for gap in overview.autonomy.coverage_gaps %}<li>{{ gap.producer or "all producers" }}: {{ gap.reason }}</li>{% endfor %}</ul></details>{% endif %}</section>
+      <section class="panel"><h2>Token budget</h2><p>{{ overview.budget.spent_tokens }} spent · {{ overview.budget.reserved_tokens }} reserved</p><p>{{ overview.budget.remaining }} of {{ overview.budget.limit }} remaining</p><p><a href="/agent-service/runs">Run costs</a></p></section>
+      <section class="panel"><h2>Recent activity</h2>{% if overview.recent_activity %}<ol>{% for event in overview.recent_activity %}<li><a href="/audit?event_type={{ event.event_type }}">{{ event.event_type }}</a> · {{ event.created_at }}</li>{% endfor %}</ol>{% else %}<p>No recent activity.</p>{% endif %}</section>
+    </div>
+  </div>
+{% endblock %}

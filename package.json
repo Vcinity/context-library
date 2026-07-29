@@ -1,0 +1,30 @@
+{
+  "name": "context-library-manager-ui",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.1.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "6.0.3",
+    "axe-core": "^4.10.2",
+    "jsdom": "25.0.1",
+    "typescript": "5.7.2",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
+  }
+}

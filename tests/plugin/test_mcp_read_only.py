@@ -1,0 +1,150 @@
+from __future__ import annotations
+
+import ast
+import importlib.util
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).parents[2]
+SERVER_PATH = ROOT / "plugins/context-library/mcp/context_library_server.py"
+
+
+def load_server():
+    spec = importlib.util.spec_from_file_location("context_library_plugin_mcp", SERVER_PATH)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def snapshot(root: Path) -> dict[str, bytes]:
+    return {str(path.relative_to(root)): path.read_bytes() for path in sorted(root.rglob("*")) if path.is_file()}
+
+
+def library_fixture(tmp_path: Path) -> Path:
+    root = tmp_path / "library"
+    pack = root / "projects/demo"
+    pack.mkdir(parents=True)
+    (pack / "README.md").write_text("# Demo\n")
+    (pack / "decision-register.md").write_text(
+        "# Decision Register\n\n"
+        '<a id="read-only"></a>\n'
+        "### Read-only Plugin\n\n"
+        "- Decision: Keep Plugin access read-only.\n"
+        "- Provenance: explicit\n"
+    )
+    (pack / "index-by-category.md").write_text("# Category\n")
+    (pack / "index-by-date.md").write_text("# Date\n")
+    return root
+
+
+def test_every_advertised_mcp_tool_is_non_mutating(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    before = snapshot(root)
+    invocations = {
+        "get_library_status": {},
+        "list_project_packs": {},
+        "read_project_artifact": {"project": "demo", "artifact": "decision-register"},
+        "search_decisions": {"project": "demo", "query": "read-only"},
+    }
+    assert set(server.TOOLS) == set(invocations)
+    for name, arguments in invocations.items():
+        server.TOOLS[name]["handler"](arguments)
+        assert snapshot(root) == before, name
+
+
+def test_mcp_path_traversal_cannot_escape_library_root(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "decision-register.md").write_text("secret")
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    with pytest.raises(server.McpError, match="escapes"):
+        server.read_project_artifact({"project": "../../outside", "artifact": "decision-register"})
+    assert (outside / "decision-register.md").read_text() == "secret"
+
+
+def test_mcp_distribution_ast_contains_no_mutating_file_operation():
+    source = SERVER_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    mutating_methods = {
+        "chmod",
+        "hardlink_to",
+        "mkdir",
+        "rename",
+        "replace",
+        "rmdir",
+        "symlink_to",
+        "touch",
+        "unlink",
+        "write_bytes",
+        "write_text",
+    }
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Attribute):
+            assert node.func.attr not in mutating_methods
+        if isinstance(node.func, ast.Name) and node.func.id == "open":
+            mode_node = (
+                node.args[1]
+                if len(node.args) > 1
+                else next(
+                    (keyword.value for keyword in node.keywords if keyword.arg == "mode"),
+                    None,
+                )
+            )
+            if isinstance(mode_node, ast.Constant) and isinstance(mode_node.value, str):
+                assert not set(mode_node.value).intersection("wax+")
+    assert "context_library_maintainer" not in source
+    assert ".splitlines()" not in ast.unparse(tree)
+
+
+def test_mcp_search_uses_authoritative_decision_read_model(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    result = server.search_decisions({"project": "demo", "query": "read-only"})
+    assert result["matches"] == [
+        {
+            "decision_id": "read-only",
+            "subject": "Read-only Plugin",
+            "excerpt": "Keep Plugin access read-only.",
+            "provenance": "explicit",
+        }
+    ]
+
+
+def test_mcp_requires_explicit_root_and_project(tmp_path, monkeypatch):
+    server = load_server()
+    monkeypatch.delenv("CONTEXT_LIBRARY_ROOT", raising=False)
+    with pytest.raises(server.McpError, match="not configured"):
+        server.get_library_status({})
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    with pytest.raises(server.McpError, match="explicitly selected"):
+        server.read_project_artifact({"artifact": "decision-register"})
+    with pytest.raises(server.McpError, match="explicitly selected"):
+        server.search_decisions({"query": "read-only"})
+
+
+def test_mcp_sole_legacy_flat_pack_accepts_an_explicit_historical_alias(tmp_path, monkeypatch):
+    server = load_server()
+    root = tmp_path / "library"
+    pack = root / "decision-artifacts"
+    pack.mkdir(parents=True)
+    (pack / "decision-register.md").write_text(
+        "# Decision Register\n\n"
+        '<a id="legacy-read"></a>\n'
+        "### Legacy read\n\n"
+        "- Decision: Preserve compatible reads.\n"
+        "- Provenance: explicit\n"
+    )
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    result = server.read_project_artifact({"project": "previous-project", "artifact": "decision-register"})
+    assert result["project"] == "previous-project"
+    assert "Preserve compatible reads." in result["text"]

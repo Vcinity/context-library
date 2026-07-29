@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "context-library"
+version = "0.3.0"
+description = "Context Library Core, Maintainer, Manager, and read-only Codex Plugin"
+authors = ["Context Library Maintainers"]
+readme = "README.md"
+packages = [
+  {include = "context_library_core", from = "src"},
+  {include = "context_library_maintainer", from = "src"},
+  {include = "context_library_manager", from = "src"},
+]
+include = [
+  {path = "src/context_library_manager/migrations/**/*.sql", format = ["sdist", "wheel"]},
+  {path = "src/context_library_manager/templates/**/*.html", format = ["sdist", "wheel"]},
+  {path = "src/context_library_manager/static/**/*", format = ["sdist", "wheel"]},
+  {path = "contracts/**/*", format = ["sdist", "wheel"]},
+  {path = "plugins/context-library/**/*", format = ["sdist", "wheel"]},
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+fastapi = "^0.115.0"
+jinja2 = "^3.1.4"
+psycopg = {version = "^3.2.0", extras = ["binary"]}
+pydantic = "^2.11.0"
+pyjwt = {version = "^2.9.0", extras = ["crypto"]}
+pyyaml = "^6.0.2"
+typer = "^0.16.0"
+uvicorn = {version = "^0.30.0", extras = ["standard"]}
+
+[tool.poetry.group.dev.dependencies]
+httpx = "^0.27.0"
+pytest = "^8.3.0"
+ruff = "^0.12.0"
+
+[tool.poetry.scripts]
+clm = "context_library_maintainer.cli:app"
+context-library-manager = "context_library_manager.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"

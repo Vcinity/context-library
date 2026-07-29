@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header"><div><p class="eyebrow">{{ project }}</p><h1>Agent run {{ run.run_id }}</h1></div><p><span class="status status--{{ run.status }}">{{ run.status }}</span></p></header>
+  <div data-island="agent-run-live" data-project="{{ project }}" data-run-id="{{ run.run_id }}" data-initial='{{ run | tojson }}'></div>
+  <div class="dashboard-grid">
+    <section class="panel"><h2>Execution</h2><dl><dt>Work</dt><dd>{{ run.work_id }}</dd><dt>Profile</dt><dd>{{ run.profile }}</dd><dt>Provider</dt><dd>{{ run.provider }}</dd><dt>Prompt revision</dt><dd>{{ run.prompt_revision }}</dd><dt>Started</dt><dd>{{ run.started_at }}</dd><dt>Finished</dt><dd>{{ run.finished_at or 'Active' }}</dd></dl>{% if can_admin and run.status in ['running','cancel-requested'] %}<div data-island="run-cancel" data-project="{{ project }}" data-run-id="{{ run.run_id }}" data-status="{{ run.status }}"></div>{% endif %}{% if can_maintain and run.work_state in ['failed','retryable','expired','canceled'] %}<div data-island="run-retry" data-project="{{ project }}" data-work-id="{{ run.run_id }}"></div>{% endif %}</section>
+    <section class="panel"><h2>Budget and usage</h2><p>{{ run.budget.input_tokens }} input · {{ run.budget.output_tokens }} output · {{ run.budget.cost }} cost</p><p>Item limit {{ run.budget.item_limit }}</p></section>
+    <section class="panel"><h2>Routing and validation</h2>{% if run.routing_checks %}<ul>{% for check in run.routing_checks %}<li>{{ check }}</li>{% endfor %}</ul>{% else %}<p>No routing checks recorded.</p>{% endif %}{% if run.warnings %}<ul>{% for warning in run.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}</section>
+    <section class="panel"><h2>Evidence</h2>{% if run.evidence_references %}<pre>{{ run.evidence_references | tojson(indent=2) }}</pre>{% else %}<p>No evidence references recorded.</p>{% endif %}<p>Raw prompt and response: {{ run.raw_payload_state }}</p></section>
+  </div>
+  <section class="panel"><h2>Timeline</h2>{% if run.timeline %}<ol>{% for event in run.timeline %}<li>{{ event.created_at }} · {{ event.event_type }} · {{ event.actor }}</li>{% endfor %}</ol>{% else %}<p>No events recorded.</p>{% endif %}</section>
+{% endblock %}

@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="panel" role="alert"><p class="eyebrow">review-already-resolved</p><h1>Another reviewer resolved this item</h1><p>Your competing rationale was preserved as review evidence. The winning resolution remains:</p>{% if review.resolution %}<p><strong>{{ review.resolution.choice }}</strong> — {{ review.resolution.rationale }}</p>{% endif %}<p><a href="/reviews/{{ review.id }}">View resolved review</a></p></section>
+{% endblock %}

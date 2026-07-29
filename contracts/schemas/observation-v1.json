@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "Person": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "identity": {
+          "title": "Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "title": "Person",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agent_interpretation": {
+      "title": "Agent Interpretation",
+      "type": "string"
+    },
+    "excerpt": {
+      "title": "Excerpt",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "directive",
+        "rationale",
+        "constraint",
+        "question",
+        "assumption",
+        "implementation",
+        "outcome",
+        "context"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "location": {
+      "title": "Location",
+      "type": "string"
+    },
+    "occurred_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Occurred At"
+    },
+    "schema": {
+      "const": "context-library/observation",
+      "default": "context-library/observation",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_id": {
+      "title": "Source Id",
+      "type": "string"
+    },
+    "speaker": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Person"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "source_id",
+    "kind",
+    "excerpt",
+    "location",
+    "agent_interpretation"
+  ],
+  "title": "Observation",
+  "type": "object"
+}

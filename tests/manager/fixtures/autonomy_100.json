@@ -1,0 +1,6 @@
+{
+  "deterministic": 70,
+  "semantic_cache_hits": 20,
+  "human_required": 5,
+  "invalid_or_budget_exhausted": 5
+}

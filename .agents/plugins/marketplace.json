@@ -1,0 +1,20 @@
+{
+  "name": "context-library",
+  "interface": {
+    "displayName": "Context Library"
+  },
+  "plugins": [
+    {
+      "name": "context-library",
+      "source": {
+        "source": "local",
+        "path": "./plugins/context-library"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

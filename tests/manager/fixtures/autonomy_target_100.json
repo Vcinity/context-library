@@ -1,0 +1,6 @@
+{
+  "deterministic": 70,
+  "semantic_cache_hits": 20,
+  "bounded_semantic_agent": 5,
+  "human_required": 5
+}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <div data-island="runtime-health" data-project="{{ project }}" data-initial='{{ health | tojson }}'>
+    <header class="page-header"><div><p class="eyebrow">Observed runtime</p><h1>Runtime health</h1></div><p><span class="status status--{{ health.status }}">{{ health.status }}</span></p></header>
+    <div class="metric-grid"><article class="metric-card"><strong>{{ health.active_leases }}</strong><span>Active leases</span></article><article class="metric-card"><strong>{{ health.retry_backlog }}</strong><span>Retry backlog</span></article><article class="metric-card"><strong>{{ health.notification_failures }}</strong><span>Notification failures</span></article></div>
+    <section class="panel"><h2>Processes</h2><div class="review-list">{% for heartbeat in health.heartbeats %}<article><h3>{{ heartbeat.process }}</h3><p><span class="status status--{{ heartbeat.state }}">{{ heartbeat.state }}</span> · {{ heartbeat.instance_id }}</p><p>Last observed {{ heartbeat.observed_at or "never" }}</p></article>{% endfor %}</div></section>
+    <div class="dashboard-grid"><section class="panel"><h2>Storage and budgets</h2><p>Database: {{ health.database }}</p>{% if health.budgets %}<ul>{% for budget in health.budgets %}<li>{{ budget.project }}: {{ budget.spent_tokens }} spent · {{ budget.reserved_tokens }} reserved</li>{% endfor %}</ul>{% else %}<p>No budget usage recorded.</p>{% endif %}</section><section class="panel"><h2>Last maintenance actions</h2>{% if health.last_maintenance_actions %}<ol>{% for action in health.last_maintenance_actions %}<li>{{ action.created_at }} · {{ action.event_type }}</li>{% endfor %}</ol>{% else %}<p>No maintenance action recorded.</p>{% endif %}</section></div>
+  </div>
+{% endblock %}

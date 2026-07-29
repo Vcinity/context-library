@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "AgentBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_input_tokens": {
+          "minimum": 0,
+          "title": "Max Input Tokens",
+          "type": "integer"
+        },
+        "max_output_tokens": {
+          "minimum": 0,
+          "title": "Max Output Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_input_tokens",
+        "max_output_tokens"
+      ],
+      "title": "AgentBudget",
+      "type": "object"
+    },
+    "AgentEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "excerpt": {
+          "maxLength": 1000,
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        },
+        "observation_id": {
+          "title": "Observation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "excerpt",
+        "location"
+      ],
+      "title": "AgentEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "actor": {
+      "title": "Actor",
+      "type": "string"
+    },
+    "budget": {
+      "$ref": "#/$defs/AgentBudget"
+    },
+    "cache_check": {
+      "const": "miss",
+      "title": "Cache Check",
+      "type": "string"
+    },
+    "deterministic_checks": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Deterministic Checks",
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/AgentEvidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "invocation_reason": {
+      "title": "Invocation Reason",
+      "type": "string"
+    },
+    "model_profile": {
+      "enum": [
+        "cheap",
+        "standard",
+        "review"
+      ],
+      "title": "Model Profile",
+      "type": "string"
+    },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "prompt_revision": {
+      "title": "Prompt Revision",
+      "type": "string"
+    },
+    "required_output_schema": {
+      "title": "Required Output Schema",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/agent-provider-request",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_type": {
+      "title": "Task Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "run_id",
+    "project",
+    "task_type",
+    "actor",
+    "model_profile",
+    "budget",
+    "prompt_revision",
+    "evidence",
+    "required_output_schema",
+    "deterministic_checks",
+    "cache_check",
+    "invocation_reason"
+  ],
+  "title": "AgentProviderRequest",
+  "type": "object"
+}

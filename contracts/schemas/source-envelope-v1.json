@@ -1,0 +1,196 @@
+{
+  "$defs": {
+    "Person": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "identity": {
+          "title": "Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "RetainedExcerpt": {
+      "additionalProperties": false,
+      "properties": {
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        }
+      },
+      "required": [
+        "excerpt",
+        "location"
+      ],
+      "title": "RetainedExcerpt",
+      "type": "object"
+    },
+    "SecretSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "title": "End",
+          "type": "integer"
+        },
+        "start": {
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "SecretSpan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "author": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Person"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "content": {
+      "title": "Content",
+      "type": "string"
+    },
+    "content_format": {
+      "enum": [
+        "text",
+        "markdown",
+        "json",
+        "transcript"
+      ],
+      "title": "Content Format",
+      "type": "string"
+    },
+    "created_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
+    },
+    "external_id": {
+      "title": "External Id",
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "retained_excerpts": {
+      "items": {
+        "$ref": "#/$defs/RetainedExcerpt"
+      },
+      "title": "Retained Excerpts",
+      "type": "array"
+    },
+    "retrieved_at": {
+      "format": "date-time",
+      "title": "Retrieved At",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/source-envelope",
+      "default": "context-library/source-envelope",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "secret_spans": {
+      "items": {
+        "$ref": "#/$defs/SecretSpan"
+      },
+      "title": "Secret Spans",
+      "type": "array"
+    },
+    "source_type": {
+      "enum": [
+        "ticket",
+        "documentation",
+        "project-note",
+        "chat",
+        "meeting",
+        "idea",
+        "code",
+        "commit",
+        "other"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    },
+    "uri": {
+      "title": "Uri",
+      "type": "string"
+    }
+  },
+  "required": [
+    "external_id",
+    "source_type",
+    "uri",
+    "title",
+    "retrieved_at",
+    "content_format",
+    "content"
+  ],
+  "title": "SourceEnvelope",
+  "type": "object"
+}

@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header"><div><p class="eyebrow">{{ project }}</p><h1>Runs and work</h1></div><p>{% if filters.state %}Filtered by {{ filters.state }}{% else %}All lifecycle states{% endif %}</p></header>
+  {% if runs %}<div class="review-list">{% for run in runs %}<article class="panel"><span class="status status--{{ run.state }}">{{ run.state }}</span><h2>{{ run.id }}</h2><p>{{ run.item_type }} · updated {{ run.updated_at }}</p>{% set agent_run = latest_runs.get(run.id) %}{% if agent_run %}<p><a href="/agent-service/runs/{{ run.id }}">Inspect processing run {{ run.id }}</a></p>{% endif %}{% if can_maintain and run.state in ['failed','retryable','expired','canceled'] %}<div data-island="run-retry" data-project="{{ project }}" data-work-id="{{ run.id }}"></div>{% endif %}</article>{% endfor %}</div>{% else %}<div class="feedback"><strong>Empty</strong><span>No work matches this filter.</span></div>{% endif %}
+{% endblock %}

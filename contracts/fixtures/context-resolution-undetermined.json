@@ -1,0 +1,12 @@
+{
+  "schema": "context-library/context-resolution",
+  "schema_version": 1,
+  "project": null,
+  "requirement": "undetermined",
+  "requirement_source": null,
+  "availability": "missing",
+  "source_digest": null,
+  "projection_fresh": null,
+  "notice_emitted": false,
+  "proceeded_without_context": true
+}

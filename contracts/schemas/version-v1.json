@@ -1,0 +1,26 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "product_version": {
+      "title": "Product Version",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/version",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "product_version"
+  ],
+  "title": "VersionEnvelope",
+  "type": "object"
+}

@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "ProposalOperation": {
+      "enum": [
+        "create",
+        "revise",
+        "supersede",
+        "exclude"
+      ],
+      "title": "ProposalOperation",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Authority",
+      "type": "string"
+    },
+    "decision_id": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Id"
+    },
+    "evidence_references": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Evidence References",
+      "type": "array"
+    },
+    "idempotency_key": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "library_digest": {
+      "maxLength": 128,
+      "minLength": 16,
+      "title": "Library Digest",
+      "type": "string"
+    },
+    "operation": {
+      "$ref": "#/$defs/ProposalOperation"
+    },
+    "proposed_fields": {
+      "additionalProperties": true,
+      "minProperties": 1,
+      "title": "Proposed Fields",
+      "type": "object"
+    },
+    "publication_intent": {
+      "title": "Publication Intent",
+      "type": "boolean"
+    },
+    "rationale": {
+      "maxLength": 20000,
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/manager-proposal",
+      "default": "context-library/manager-proposal",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "operation",
+    "proposed_fields",
+    "rationale",
+    "evidence_references",
+    "authority",
+    "publication_intent",
+    "library_digest",
+    "idempotency_key"
+  ],
+  "title": "ProposalSubmission",
+  "type": "object"
+}

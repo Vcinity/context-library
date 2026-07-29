@@ -1,0 +1,7 @@
+{
+  "schema": "context-library/context-policy",
+  "schema_version": 2,
+  "project": "Demo/../escape",
+  "context_requirement": "mandatory",
+  "affected_layers": {}
+}

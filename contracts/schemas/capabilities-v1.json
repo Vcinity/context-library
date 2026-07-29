@@ -1,0 +1,53 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "canonical_layout_versions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Canonical Layout Versions",
+      "type": "array"
+    },
+    "features": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "title": "Features",
+      "type": "object"
+    },
+    "product_version": {
+      "title": "Product Version",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/capabilities",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_families": {
+      "additionalProperties": {
+        "items": {
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "title": "Schema Families",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "product_version",
+    "schema_families",
+    "canonical_layout_versions",
+    "features"
+  ],
+  "title": "CapabilityEnvelope",
+  "type": "object"
+}

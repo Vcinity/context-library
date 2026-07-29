@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <p><a href="/reviews">← Review queue</a></p>
+  <span class="status status--{{ review.status }}">{{ review.status }}</span>
+  <h1>{{ review.question }}</h1>
+  <div class="dashboard-grid">
+    <section class="panel"><h2>Context</h2><p>{{ review.reason }} · {{ review.urgency }} urgency</p><p>{{ (review.age_seconds / 3600)|round(1) }} hours old · SLA {{ (review.sla_seconds / 3600)|round }} hours</p><p>Work {{ review.work.id }} is {{ review.work.state }}</p></section>
+    <section class="panel"><h2>Evidence</h2>{% if review.evidence %}<ul>{% for item in review.evidence %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p>No evidence references recorded.</p>{% endif %}</section>
+    <section class="panel"><h2>Recommendation</h2><p>{{ review.recommendation or "No safe recommendation; human judgment is required." }}</p></section>
+    <section class="panel"><h2>Agent usage</h2>{% if review.runs %}<ul>{% for run in review.runs %}<li>{{ run.profile }} · {{ run.status }} · {{ run.input_tokens + run.output_tokens }} tokens · ${{ run.cost }}</li>{% endfor %}</ul>{% else %}<p>No agent run was required.</p>{% endif %}</section>
+  </div>
+  {% if review.status == "open" and can_review %}<div data-island="review-resolution" data-project="{{ project }}" data-review-id="{{ review.id }}" data-choices='{{ review.choices|tojson }}'>
+    <form class="proposal-form" method="post" action="/reviews/{{ review.id }}/resolve">
+      <fieldset><legend>Choose one resolution</legend>{% for choice in review.choices %}<label class="choice"><input type="radio" name="choice" value="{{ choice }}" required>{{ choice }}</label>{% endfor %}</fieldset>
+      <label>Rationale<textarea name="rationale" required></textarea></label>
+      <input type="hidden" name='csrf_token' value='{{ review_csrf }}'>
+      <input type="hidden" name="idempotency_key" value="{{ web_idempotency_key }}">
+      <button type="submit">Resolve review</button>
+    </form>
+  </div>{% elif review.resolution %}<section class="panel"><h2>Resolution</h2><p>{{ review.resolution.choice }} — {{ review.resolution.rationale }}</p></section>{% endif %}
+{% endblock %}

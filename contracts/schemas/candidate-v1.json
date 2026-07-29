@@ -1,0 +1,282 @@
+{
+  "$defs": {
+    "Applicability": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence_observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Observation Ids",
+          "type": "array"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provenance",
+        "confidence",
+        "reasoning"
+      ],
+      "title": "Applicability",
+      "type": "object"
+    },
+    "Person": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "identity": {
+          "title": "Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "Review": {
+      "additionalProperties": false,
+      "properties": {
+        "reviewed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewed At"
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Person"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "default": "unreviewed",
+          "enum": [
+            "unreviewed",
+            "reviewed",
+            "ratified",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "title": "Review",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "affected_layers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Affected Layers",
+      "type": "array"
+    },
+    "applicability": {
+      "$ref": "#/$defs/Applicability"
+    },
+    "applies_when": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Applies When"
+    },
+    "candidate_id": {
+      "pattern": "^[a-z][a-z0-9-]{2,79}$",
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "category": {
+      "title": "Category",
+      "type": "string"
+    },
+    "conflict_key": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Conflict Key"
+    },
+    "conflicts_with": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Conflicts With",
+      "type": "array"
+    },
+    "constraint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Constraint"
+    },
+    "decision": {
+      "title": "Decision",
+      "type": "string"
+    },
+    "decision_at": {
+      "format": "date-time",
+      "title": "Decision At",
+      "type": "string"
+    },
+    "decisionmaker": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Person"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "derivation": {
+      "enum": [
+        "direct",
+        "condensed",
+        "synthesized"
+      ],
+      "title": "Derivation",
+      "type": "string"
+    },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "provenance": {
+      "enum": [
+        "explicit",
+        "inferred",
+        "assumed"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "rationale": {
+      "title": "Rationale",
+      "type": "string"
+    },
+    "review": {
+      "$ref": "#/$defs/Review"
+    },
+    "schema": {
+      "const": "context-library/candidate",
+      "default": "context-library/candidate",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_observation_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Observation Ids",
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "subject": {
+      "title": "Subject",
+      "type": "string"
+    },
+    "supersedes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supersedes",
+      "type": "array"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "project",
+    "candidate_id",
+    "subject",
+    "category",
+    "decision",
+    "rationale",
+    "decision_at",
+    "provenance",
+    "derivation",
+    "applicability"
+  ],
+  "title": "Candidate",
+  "type": "object"
+}

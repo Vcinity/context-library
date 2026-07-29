@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "affected_layers": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Affected Layers",
+      "type": "object"
+    },
+    "context_requirement": {
+      "enum": [
+        "required",
+        "optional",
+        "disabled"
+      ],
+      "title": "Context Requirement",
+      "type": "string"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "schema": {
+      "const": "context-library/context-policy",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "context_requirement"
+  ],
+  "title": "ContextPolicy",
+  "type": "object"
+}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <p><a href="/library">← Library</a></p>
+  <h1>Proposal {{ proposal.id }}</h1>
+  <p><span class="status status--pending">{{ lifecycle.state }}</span></p>
+  <p>This proposal is pending Runtime processing; canonical content has not changed.</p>
+  <dl class="panel"><dt>Operation</dt><dd>{{ proposal.operation }}</dd><dt>Decision</dt><dd>{{ proposal.decision_id or "new" }}</dd><dt>Actor</dt><dd>{{ proposal.actor }}</dd><dt>Base digest</dt><dd>{{ proposal.library_digest }}</dd><dt>Created</dt><dd>{{ proposal.created_at }}</dd></dl>
+  <section class="panel"><h2>Rationale</h2><p>{{ proposal.payload.rationale }}</p><h2>Proposed fields</h2><pre>{{ proposal.payload.proposed_fields|tojson(indent=2) }}</pre></section>
+{% endblock %}

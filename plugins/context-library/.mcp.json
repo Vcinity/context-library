@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "context_library": {
+      "command": "python3",
+      "args": ["./mcp/context_library_server.py"],
+      "cwd": "./"
+    }
+  }
+}

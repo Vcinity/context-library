@@ -1,0 +1,12 @@
+{
+  "schema": "context-library/context-resolution",
+  "schema_version": 1,
+  "project": "demo",
+  "requirement": "required",
+  "requirement_source": ".context-library/config.json",
+  "availability": "missing",
+  "source_digest": null,
+  "projection_fresh": false,
+  "notice_emitted": true,
+  "proceeded_without_context": true
+}

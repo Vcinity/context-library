@@ -1,0 +1,51 @@
+{
+  "projects": ["example", "demo"],
+  "users": [
+    {"subject": "reader", "claim": "viewer", "capability": "read", "projects": ["demo"]},
+    {"subject": "reviewer", "claim": "reviewer", "capability": "review", "projects": ["example"]},
+    {"subject": "maintainer", "claim": "maintainer", "capability": "maintain", "projects": ["example"]},
+    {"subject": "operator", "claim": "administrator", "capability": "admin", "projects": ["example", "demo"]}
+  ],
+  "decisions": [
+    {"decision_id": "status-authoritative", "subject": "Authoritative", "decision": "Explicit current decision", "provenance": "explicit", "status": "authoritative", "publication_revision": "rev-1", "library_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"decision_id": "status-inferred", "subject": "Inferred", "decision": "Inferred decision", "provenance": "inferred", "status": "inferred", "publication_revision": "rev-1", "library_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"decision_id": "status-assumed", "subject": "Assumed", "decision": "Assumed decision", "provenance": "assumed", "status": "assumed", "publication_revision": "rev-1", "library_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"decision_id": "status-pending", "subject": "Pending", "decision": "Pending proposal", "provenance": "explicit", "status": "pending", "publication_revision": "rev-1", "library_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"decision_id": "status-superseded", "subject": "Superseded", "decision": "Old decision", "provenance": "explicit", "status": "superseded", "publication_revision": "rev-1", "library_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"decision_id": "status-excluded", "subject": "Excluded", "decision": "Excluded decision", "provenance": "explicit", "status": "excluded", "publication_revision": "rev-1", "library_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+  ],
+  "service_snapshots": [
+    {"state": "running", "health": "healthy", "version": 1},
+    {"state": "paused", "health": "healthy", "version": 2},
+    {"state": "draining", "health": "healthy", "version": 3},
+    {"state": "running", "health": "degraded", "version": 4},
+    {"state": "running", "health": "offline", "version": 5}
+  ],
+  "runs": [
+    {"run_id": "run-active", "work_id": "work-active", "project": "example", "status": "running", "profile": "cheap", "cache_hit": false, "input_tokens": 10, "output_tokens": 0, "cost": 0.01, "started_at": "2026-07-16T12:00:00Z", "finished_at": null},
+    {"run_id": "run-failed", "work_id": "work-failed", "project": "example", "status": "failed", "profile": "cheap", "cache_hit": false, "input_tokens": 10, "output_tokens": 2, "cost": 0.02, "started_at": "2026-07-16T11:00:00Z", "finished_at": "2026-07-16T11:01:00Z"},
+    {"run_id": "run-expired", "work_id": "work-expired", "project": "example", "status": "expired", "profile": "standard", "cache_hit": false, "input_tokens": 0, "output_tokens": 0, "cost": 0, "started_at": "2026-07-16T10:00:00Z", "finished_at": "2026-07-16T10:30:00Z"},
+    {"run_id": "run-canceled", "work_id": "work-canceled", "project": "example", "status": "canceled", "profile": "standard", "cache_hit": false, "input_tokens": 20, "output_tokens": 5, "cost": 0.04, "started_at": "2026-07-16T09:00:00Z", "finished_at": "2026-07-16T09:02:00Z"},
+    {"run_id": "run-cache", "work_id": "work-cache", "project": "example", "status": "succeeded", "profile": "cheap", "cache_hit": true, "input_tokens": 0, "output_tokens": 0, "cost": 0, "started_at": "2026-07-16T08:00:00Z", "finished_at": "2026-07-16T08:00:01Z"}
+  ],
+  "reviews": [
+    {"review_id": "review-open", "project": "example", "work_id": "work-open", "status": "open", "question": "Which applies?", "created_at": "2026-07-16T08:00:00Z", "updated_at": "2026-07-16T08:00:00Z"},
+    {"review_id": "review-resolved", "project": "example", "work_id": "work-resolved", "status": "resolved", "question": "Which applies?", "created_at": "2026-07-15T08:00:00Z", "updated_at": "2026-07-16T08:00:00Z"},
+    {"review_id": "review-stale", "project": "example", "work_id": "work-stale", "status": "stale", "question": "Needs refresh", "created_at": "2026-06-01T08:00:00Z", "updated_at": "2026-06-01T08:00:00Z"}
+  ],
+  "notifications": [
+    {"notification_id": "notice-pending", "review_id": "review-open", "status": "pending", "attempts": 0, "created_at": "2026-07-16T08:00:00Z"},
+    {"notification_id": "notice-delivered", "review_id": "review-resolved", "status": "delivered", "attempts": 1, "created_at": "2026-07-15T08:00:00Z"},
+    {"notification_id": "notice-failed", "review_id": "review-stale", "status": "failed", "attempts": 3, "created_at": "2026-06-01T08:00:00Z"}
+  ],
+  "configuration": [
+    {"name": "autonomy.enabled", "value": true, "source": "default"},
+    {"name": "runtime.lease_seconds", "value": 1800, "source": "project-file"},
+    {"name": "runtime.worker_concurrency", "value": 4, "source": "environment"},
+    {"name": "security.session_secret", "value": null, "source": "secret-store"}
+  ],
+  "conflicts": {
+    "stale_revision": {"expected_revision": 1, "current_revision": 2, "error": "revision-conflict"},
+    "duplicate_idempotency": {"key": "proposal-duplicate", "same_response": true}
+  }
+}

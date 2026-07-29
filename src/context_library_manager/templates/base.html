@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} · Context Library Manager</title>
+    {% for stylesheet in assets.styles %}<link rel="stylesheet" href="{{ stylesheet }}">{% endfor %}
+    {% if assets.script %}<script type="module" src="{{ assets.script }}"></script>{% endif %}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="/">Context Library Manager</a>
+        <div class="topbar__context">
+          <span class="status status--{{ service_state }}">Agent Service: {{ service_state }}{% if service_state != service_operator_state %} (operator state {{ service_operator_state }}){% endif %}</span>
+          <span>{{ user.display_name }}</span>
+        </div>
+      </header>
+      <div class="workspace">
+        <aside class="sidebar">
+          <div data-island="project-selector" data-project="{{ project }}" data-projects='{{ projects|tojson }}'>
+            <form method="post" action="/session/project">
+              <label>Project<select name="project">{% for item in projects %}<option value="{{ item.id }}"{% if item.id == project %} selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
+              <input type="hidden" name="csrf_token" value="{{ project_csrf }}">
+              <button type="submit">Switch project</button>
+            </form>
+          </div>
+          <nav aria-label="Primary">
+            <a href="/">Overview</a><a href="/library">Library</a><a href="/reviews">Reviews</a>
+            <a href="/agent-service">Agent Service</a><a href="/publications">Publications</a>
+            <a href="/health">Runtime</a><a href="/configuration">Configuration</a><a href="/audit">Audit</a>
+          </nav>
+        </aside>
+        <details class="mobile-nav">
+          <summary>Menu · {{ project }}</summary>
+          <div data-island="project-selector" data-project="{{ project }}" data-projects='{{ projects|tojson }}'>
+            <form method="post" action="/session/project">
+              <label>Project<select name="project">{% for item in projects %}<option value="{{ item.id }}"{% if item.id == project %} selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
+              <input type="hidden" name="csrf_token" value="{{ project_csrf }}">
+              <button type="submit">Switch project</button>
+            </form>
+          </div>
+          <nav aria-label="Mobile primary">
+            <a href="/">Overview</a><a href="/library">Library</a><a href="/reviews">Reviews</a>
+            <a href="/agent-service">Agent Service</a><a href="/publications">Publications</a>
+            <a href="/health">Runtime</a><a href="/configuration">Configuration</a><a href="/audit">Audit</a>
+          </nav>
+        </details>
+        <main id="main" tabindex="-1">{% block content %}{% endblock %}</main>
+      </div>
+    </div>
+  </body>
+</html>

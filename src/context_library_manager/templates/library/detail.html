@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <div data-island="library-detail-refresh" data-project="{{ project }}" data-decision-id="{{ decision.decision_id }}" data-digest="{{ snapshot.library_digest }}"></div>
+  <p><a href="/library">← Library</a></p>
+  <span class="status status--{{ decision.status }}">{% if decision.status in ["inferred", "assumed"] %}{{ decision.status|title }}—not mandatory{% else %}{{ decision.status|title }}{% endif %}</span>
+  <h1>{{ decision.subject }}</h1>
+  <section class="panel"><h2>Decision</h2><p>{{ decision.decision }}</p><h2>Rationale</h2><p>{{ decision.rationale }}</p></section>
+  <dl class="panel">
+    <dt>ID</dt><dd>{{ decision.decision_id }}</dd>
+    <dt>Category</dt><dd>{{ decision.category }}</dd>
+    <dt>Provenance</dt><dd>{{ decision.provenance }}</dd>
+    <dt>Decisionmaker</dt><dd>{{ decision.decisionmaker }}</dd>
+    <dt>Date</dt><dd>{{ decision.decision_date }}</dd>
+  </dl>
+  <section class="panel"><h2>Evidence</h2>{% if decision.sources %}<ul>{% for source in decision.sources %}{% set href = source.uri|safe_href %}<li>{% if href %}<a href="{{ href }}">{{ source.label }}</a>{% else %}{{ source.label }}{% endif %}{% if source.redacted %} (redacted){% endif %}</li>{% endfor %}</ul>{% else %}<p>No source references recorded.</p>{% endif %}</section>
+  <section class="panel"><h2>Supersession</h2><p>Supersedes: {{ decision.supersedes|join(", ") or "none" }}</p><p>Superseded by: {{ decision.superseded_by|join(", ") or "none" }}</p></section>
+  {% if can_maintain %}<p><a href="/library/proposals/new?decision_id={{ decision.decision_id }}">Propose edit</a></p>{% endif %}
+{% endblock %}

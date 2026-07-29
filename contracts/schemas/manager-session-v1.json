@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "Capability": {
+      "enum": [
+        "read",
+        "review",
+        "maintain",
+        "admin"
+      ],
+      "title": "Capability",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "allowed_projects": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Allowed Projects",
+      "type": "array"
+    },
+    "capabilities": {
+      "items": {
+        "$ref": "#/$defs/Capability"
+      },
+      "minItems": 1,
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "csrf_token": {
+      "anyOf": [
+        {
+          "maxLength": 512,
+          "minLength": 32,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Csrf Token"
+    },
+    "display_name": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Display Name",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "issued_at": {
+      "format": "date-time",
+      "title": "Issued At",
+      "type": "string"
+    },
+    "oidc_session_reference": {
+      "anyOf": [
+        {
+          "maxLength": 1024,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Oidc Session Reference"
+    },
+    "selected_project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selected Project"
+    },
+    "subject": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Subject",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subject",
+    "display_name",
+    "capabilities",
+    "allowed_projects",
+    "issued_at",
+    "expires_at"
+  ],
+  "title": "SessionIdentity",
+  "type": "object"
+}

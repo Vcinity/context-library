@@ -1,0 +1,7 @@
+{
+  "schema": "context-library/context-policy",
+  "schema_version": 1,
+  "project": "demo",
+  "context_requirement": "optional",
+  "affected_layers": {}
+}

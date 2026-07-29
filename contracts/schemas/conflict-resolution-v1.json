@@ -1,0 +1,73 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "choice": {
+      "title": "Choice",
+      "type": "string"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rationale"
+    },
+    "resolution_candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resolution Candidate Id"
+    },
+    "resolution_source_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resolution Source Id"
+    },
+    "resolved_at": {
+      "format": "date-time",
+      "title": "Resolved At",
+      "type": "string"
+    },
+    "resolver": {
+      "title": "Resolver",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/conflict-resolution",
+      "default": "context-library/conflict-resolution",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "choice",
+    "resolver",
+    "resolved_at"
+  ],
+  "title": "ConflictResolution",
+  "type": "object"
+}

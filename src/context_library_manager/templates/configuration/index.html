@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header"><div><p class="eyebrow">Administration</p><h1>Configuration</h1><p class="meta">Runtime-owned settings for {{ project }} · revision {{ configuration.revision }}</p></div></header>
+  <div data-island="configuration" data-project="{{ project }}" data-can-admin="{{ 'true' if can_admin else 'false' }}" data-initial='{{ configuration | tojson }}' data-history='{{ history | tojson }}'>
+    {% for group in ["Processing", "Budgets", "Notifications"] %}
+      <section class="panel"><h2>{{ group }}</h2><dl>{% for name,field in configuration.fields.items() if field.constraints.group == group %}<dt>{{ name | replace('_', ' ') }}</dt><dd>{{ field.value }} <span class="meta">({{ field.source }})</span></dd>{% endfor %}</dl></section>
+    {% endfor %}
+    {% if not can_admin %}<p class="feedback">Read-only access. Administrator capability is required to change configuration.</p>{% endif %}
+  </div>
+{% endblock %}
