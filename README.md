@@ -58,3 +58,6 @@ See [ARCHITECTURE.md](ARCHITECTURE.md), [MIGRATION.md](MIGRATION.md), and
 For a task-oriented overview of the available Plugin tools, projection
 commands, Manager workflow, and `clm` use cases, see
 [docs/TOOL_USE_CASES.md](docs/TOOL_USE_CASES.md).
+
+For sparse-checkout deployment of only the Plugin from a tagged monorepo
+release, see [docs/PLUGIN_DEPLOYMENT.md](docs/PLUGIN_DEPLOYMENT.md).

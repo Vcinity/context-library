@@ -16,6 +16,8 @@ This plugin packages the shared context-library skill for Codex.
 ## Distribution
 
 The host configures the separately governed companion-library root.
+Deployment from the monorepo, including a Plugin-only sparse checkout, is
+documented in [../../docs/PLUGIN_DEPLOYMENT.md](../../docs/PLUGIN_DEPLOYMENT.md).
 
 ## MCP Tools
 

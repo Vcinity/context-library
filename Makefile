@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-MARKDOWN_FILES := AGENTS.md ARCHITECTURE.md CHANGELOG.md IMPLEMENTATION_PROMPT.md MIGRATION.md README.md SPEC.md docs/DEPLOYMENT.md docs/RECOVERY.md docs/TOOL_USE_CASES.md
+MARKDOWN_FILES := AGENTS.md ARCHITECTURE.md CHANGELOG.md IMPLEMENTATION_PROMPT.md MIGRATION.md README.md SPEC.md docs/DEPLOYMENT.md docs/PLUGIN_DEPLOYMENT.md docs/RECOVERY.md docs/TOOL_USE_CASES.md
 
 .PHONY: install test lint format check contracts contracts-check plugin-build plugin-check ui-build ui-test e2e smoke package run openapi openapi-check
 
