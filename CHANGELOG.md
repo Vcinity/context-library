@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 - Unreleased
+## 0.3.1 - Unreleased
 
 - Consolidate Core, Maintainer, Manager, frontend, and Plugin into one
   versioned monorepo release.
