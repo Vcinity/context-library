@@ -16,7 +16,12 @@ from context_library_core.canonical import (
     weakest_provenance,
 )
 from context_library_core.contracts import SCHEMA_FAMILIES, ContextPolicy, ContextResolution
-from context_library_core.maintainer_contracts import Candidate, Observation, SourceEnvelope
+from context_library_core.maintainer_contracts import (
+    Candidate,
+    HarvestBatch,
+    Observation,
+    SourceEnvelope,
+)
 
 ROOT = Path(__file__).parents[2]
 FIXTURES = ROOT / "contracts/fixtures"
@@ -167,6 +172,86 @@ def test_machine_contracts_emit_named_schema_families():
         assert serialized["schema_version"] in SCHEMA_FAMILIES[family]
     assert "context-library/candidate" in SCHEMA_FAMILIES
     assert Candidate.model_json_schema()["properties"]["schema"]["const"] == "context-library/candidate"
+
+
+def test_harvest_batch_is_redacted_proposal_only_and_references_local_sources():
+    source = SourceEnvelope.model_validate(
+        {
+            "external_id": "source-1",
+            "source_type": "chat",
+            "uri": "https://example.invalid/source-1",
+            "title": "Synthetic discussion",
+            "retrieved_at": "2026-08-03T00:00:00Z",
+            "content_format": "text",
+            "content": "Use the narrow interface.",
+        }
+    )
+    observation = Observation.model_validate(
+        {
+            "source_id": "source-1",
+            "kind": "directive",
+            "excerpt": "Use the narrow interface.",
+            "location": "message-1",
+            "agent_interpretation": "Synthetic directive.",
+        }
+    )
+    batch = HarvestBatch.model_validate(
+        {
+            "batch_id": "batch-1",
+            "idempotency_key": "harvest-1",
+            "project": "synthetic-project",
+            "produced_at": "2026-08-03T00:00:00Z",
+            "sources": [source.model_dump(by_alias=True)],
+            "observations": [observation.model_dump(by_alias=True)],
+        }
+    )
+    assert batch.redacted is True
+    assert batch.canonical_write is False
+    assert batch.schema_id == "context-library/harvest-batch"
+
+
+def test_harvest_batch_rejects_unredacted_or_cross_batch_references():
+    base = {
+        "batch_id": "batch-1",
+        "idempotency_key": "harvest-1",
+        "project": "synthetic-project",
+        "produced_at": "2026-08-03T00:00:00Z",
+        "redacted": False,
+    }
+    with pytest.raises(ValidationError, match="redacted"):
+        HarvestBatch.model_validate(base)
+
+    source_with_secret_span = {
+        "external_id": "source-secret",
+        "source_type": "chat",
+        "uri": "https://example.invalid/source-secret",
+        "title": "Synthetic secret source",
+        "retrieved_at": "2026-08-03T00:00:00Z",
+        "content_format": "text",
+        "content": "Evidence",
+        "secret_spans": [{"start": 0, "end": 1}],
+    }
+    with pytest.raises(ValidationError, match="already be redacted"):
+        HarvestBatch.model_validate({**base, "redacted": True, "sources": [source_with_secret_span]})
+
+    source = {
+        "external_id": "source-1",
+        "source_type": "chat",
+        "uri": "https://example.invalid/source-1",
+        "title": "Synthetic discussion",
+        "retrieved_at": "2026-08-03T00:00:00Z",
+        "content_format": "text",
+        "content": "Evidence",
+    }
+    observation = {
+        "source_id": "source-not-in-batch",
+        "kind": "context",
+        "excerpt": "Evidence",
+        "location": "message-1",
+        "agent_interpretation": "Synthetic context.",
+    }
+    with pytest.raises(ValidationError, match="source in the batch"):
+        HarvestBatch.model_validate({**base, "redacted": True, "sources": [source], "observations": [observation]})
 
 
 def test_synthesis_rejects_provenance_laundering_and_cycles():

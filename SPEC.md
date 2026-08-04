@@ -159,6 +159,22 @@ explicitly authorized unattended-maintenance workflows.
 No agent may strengthen provenance, silently resolve a genuine authority
 conflict, or edit canonical Markdown directly.
 
+### 4.5 Harvester integration
+
+Private context harvesters integrate through the versioned
+`context-library/harvest-batch` contract documented in
+`contracts/HARVESTER_LIBRARY_V1.md`.
+
+The contract is proposal-only. It MUST contain redacted source evidence,
+observations, unreviewed candidates, and findings as applicable. It MUST NOT
+grant a harvester canonical write authority, contact-notification authority,
+or permission to bypass Manager policy and Maintainer publication gates.
+
+The public repository owns the contract and its compatibility policy. Private
+harvester repositories own source adapters, transports, model providers, and
+deployment configuration. Cross-repository behavior changes MUST update the
+versioned contract and its generated schema.
+
 ## 5. Required Repository Structure
 
 The implemented monorepo MUST converge on this structure or an equivalently
@@ -169,7 +185,6 @@ clear structure documented in `ARCHITECTURE.md`:
 ├── AGENTS.md
 ├── ARCHITECTURE.md
 ├── CHANGELOG.md
-├── HANDOFF.md
 ├── IMPLEMENTATION_PROMPT.md
 ├── Makefile
 ├── README.md
@@ -1062,7 +1077,7 @@ Implementation SHOULD proceed in this order:
 1. implement context-requirement and notice behavior;
 1. add integrated packaging, CI, and release versioning;
 1. run migration, integration, and adversarial validation; and
-1. update handoff and release documentation.
+1. update release documentation.
 
 Each phase MUST leave the relevant tests passing before the next phase starts.
 
@@ -1131,10 +1146,10 @@ The monorepo MUST maintain:
 - `README.md`: installation, development, operation, and component overview;
 - `ARCHITECTURE.md`: dependency and authority boundaries;
 - `AGENTS.md`: concise repository instructions and Context Library projection;
-- `HANDOFF.md`: current migration state and next action;
 - `MIGRATION.md`: source commits and source-to-destination mapping;
 - `CHANGELOG.md`: product releases and migrations;
 - API and CLI reference generated from code where practical;
+- `contracts/HARVESTER_LIBRARY_V1.md`: private harvester integration boundary;
 - Plugin missing-context and management-remediation guidance; and
 - production deployment and recovery procedures.
 
@@ -1199,8 +1214,8 @@ The monorepo is accepted only when:
    either a Claude Opus `xhigh` review or the required Codex fallback when
    Claude token or usage quota was exhausted.
 1. No unaccepted Critical, High, or Medium review finding remains.
-1. The final worktree is clean except for intentionally documented handoff
-   artifacts.
+1. The final worktree is clean except for explicitly documented generated or
+   release artifacts.
 
 ## 22. Completion Definition
 

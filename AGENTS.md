@@ -53,6 +53,20 @@
   authorizes it.
 - Use synthetic repositories or temporary copies for mutation and recovery
   tests. Never commit canonical decision records to this code repository.
+
+## Public-repository hygiene
+
+- Treat this repository as public source. Do not commit company names,
+  customer names, internal project names, private URLs, email addresses,
+  chat transcripts, issue contents, credentials, tokens, or other
+  organization-specific details.
+- Use synthetic fixtures, generic examples, and redacted metadata for tests,
+  documentation, demonstrations, and examples.
+- Keep deployment-specific connectors, tenant identifiers, contact data, and
+  harvested source content outside the repository unless explicitly sanitized
+  and authorized for publication.
+- Before committing a change, scan new or modified files for accidental
+  private data and report any uncertainty instead of guessing.
 - For code changes, run the narrowest relevant tests first, then run the root
   validation required by the specification: `make test`, `make check`,
   `make e2e`, `make smoke`, `make contracts-check`, `make plugin-check`,

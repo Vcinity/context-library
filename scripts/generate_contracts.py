@@ -22,6 +22,7 @@ from context_library_core.maintainer_contracts import (
     ConflictPacket,
     ConflictResolution,
     Finding,
+    HarvestBatch,
     Observation,
     SourceEnvelope,
 )
@@ -39,6 +40,7 @@ MODELS: dict[str, Type[BaseModel]] = {
     "conflict-packet-v1": ConflictPacket,
     "conflict-resolution-v1": ConflictResolution,
     "finding-v1": Finding,
+    "harvest-batch-v1": HarvestBatch,
     "maintainer-command-v1": CommandEnvelope,
     "manager-proposal-v1": ProposalSubmission,
     "manager-session-v1": SessionIdentity,

@@ -212,6 +212,40 @@ class Finding(StrictModel):
         return value
 
 
+class HarvestBatch(StrictModel):
+    """Proposal-only transfer from a private context harvester to the library."""
+
+    schema_id: Literal["context-library/harvest-batch"] = Field(default="context-library/harvest-batch", alias="schema")
+    schema_version: Literal[1] = 1
+    batch_id: str = Field(min_length=1, max_length=256)
+    idempotency_key: str = Field(min_length=1, max_length=256)
+    project: str = Field(min_length=1, max_length=256)
+    produced_at: datetime
+    redacted: Literal[True] = True
+    canonical_write: Literal[False] = False
+    sources: list[SourceEnvelope] = Field(default_factory=list)
+    observations: list[Observation] = Field(default_factory=list)
+    candidates: list[Candidate] = Field(default_factory=list)
+    findings: list[Finding] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def references_are_local_and_proposal_only(self) -> "HarvestBatch":
+        source_ids = {source.external_id for source in self.sources}
+        if len(source_ids) != len(self.sources):
+            raise ValueError("harvest sources must have unique external IDs")
+        if any(source.secret_spans for source in self.sources):
+            raise ValueError("harvest sources must already be redacted")
+        if any(observation.source_id not in source_ids for observation in self.observations):
+            raise ValueError("observations must reference a source in the batch")
+        candidate_projects = {candidate.project for candidate in self.candidates}
+        if candidate_projects and candidate_projects != {self.project}:
+            raise ValueError("candidate projects must match the harvest project")
+        candidate_ids = {candidate.candidate_id for candidate in self.candidates}
+        if any(finding.candidate_id not in candidate_ids for finding in self.findings):
+            raise ValueError("findings must reference a candidate in the batch")
+        return self
+
+
 class ConflictChoice(StrictModel):
     value: str
     label: str

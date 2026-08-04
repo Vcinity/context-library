@@ -17,6 +17,7 @@ SCHEMA_FAMILIES: dict[str, list[int]] = {
     "context-library/conflict-packet": [1],
     "context-library/conflict-resolution": [1],
     "context-library/finding": [1],
+    "context-library/harvest-batch": [1],
     "context-library/maintainer-command": [1],
     "context-library/manager-proposal": [1],
     "context-library/manager-query": [1],

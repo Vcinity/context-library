@@ -54,3 +54,7 @@ through the Manager.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [MIGRATION.md](MIGRATION.md), and
 [docs/MAINTAINER_ADMINISTRATION.md](docs/MAINTAINER_ADMINISTRATION.md).
+
+For a task-oriented overview of the available Plugin tools, projection
+commands, Manager workflow, and `clm` use cases, see
+[docs/TOOL_USE_CASES.md](docs/TOOL_USE_CASES.md).

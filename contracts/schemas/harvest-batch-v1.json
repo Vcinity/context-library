@@ -1,0 +1,683 @@
+{
+  "$defs": {
+    "Applicability": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence_observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Observation Ids",
+          "type": "array"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provenance",
+        "confidence",
+        "reasoning"
+      ],
+      "title": "Applicability",
+      "type": "object"
+    },
+    "Candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Layers",
+          "type": "array"
+        },
+        "applicability": {
+          "$ref": "#/$defs/Applicability"
+        },
+        "applies_when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applies When"
+        },
+        "candidate_id": {
+          "pattern": "^[a-z][a-z0-9-]{2,79}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "conflict_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conflict Key"
+        },
+        "conflicts_with": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicts With",
+          "type": "array"
+        },
+        "constraint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Constraint"
+        },
+        "decision": {
+          "title": "Decision",
+          "type": "string"
+        },
+        "decision_at": {
+          "format": "date-time",
+          "title": "Decision At",
+          "type": "string"
+        },
+        "decisionmaker": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Person"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "derivation": {
+          "enum": [
+            "direct",
+            "condensed",
+            "synthesized"
+          ],
+          "title": "Derivation",
+          "type": "string"
+        },
+        "project": {
+          "title": "Project",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/Review"
+        },
+        "schema": {
+          "const": "context-library/candidate",
+          "default": "context-library/candidate",
+          "title": "Schema",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Observation Ids",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "supersedes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supersedes",
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "project",
+        "candidate_id",
+        "subject",
+        "category",
+        "decision",
+        "rationale",
+        "decision_at",
+        "provenance",
+        "derivation",
+        "applicability"
+      ],
+      "title": "Candidate",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "canonical_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Canonical Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence_observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Observation Ids",
+          "type": "array"
+        },
+        "finding": {
+          "enum": [
+            "duplicate",
+            "supersedes",
+            "conflict",
+            "related"
+          ],
+          "title": "Finding",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "schema": {
+          "const": "context-library/finding",
+          "default": "context-library/finding",
+          "title": "Schema",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "finding",
+        "candidate_id",
+        "confidence",
+        "evidence_observation_ids",
+        "reasoning"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_interpretation": {
+          "title": "Agent Interpretation",
+          "type": "string"
+        },
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "directive",
+            "rationale",
+            "constraint",
+            "question",
+            "assumption",
+            "implementation",
+            "outcome",
+            "context"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        },
+        "occurred_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurred At"
+        },
+        "schema": {
+          "const": "context-library/observation",
+          "default": "context-library/observation",
+          "title": "Schema",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "speaker": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Person"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_id",
+        "kind",
+        "excerpt",
+        "location",
+        "agent_interpretation"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "Person": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "identity": {
+          "title": "Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "RetainedExcerpt": {
+      "additionalProperties": false,
+      "properties": {
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        }
+      },
+      "required": [
+        "excerpt",
+        "location"
+      ],
+      "title": "RetainedExcerpt",
+      "type": "object"
+    },
+    "Review": {
+      "additionalProperties": false,
+      "properties": {
+        "reviewed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewed At"
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Person"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "default": "unreviewed",
+          "enum": [
+            "unreviewed",
+            "reviewed",
+            "ratified",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "title": "Review",
+      "type": "object"
+    },
+    "SecretSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "title": "End",
+          "type": "integer"
+        },
+        "start": {
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "SecretSpan",
+      "type": "object"
+    },
+    "SourceEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Person"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "content_format": {
+          "enum": [
+            "text",
+            "markdown",
+            "json",
+            "transcript"
+          ],
+          "title": "Content Format",
+          "type": "string"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "external_id": {
+          "title": "External Id",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "retained_excerpts": {
+          "items": {
+            "$ref": "#/$defs/RetainedExcerpt"
+          },
+          "title": "Retained Excerpts",
+          "type": "array"
+        },
+        "retrieved_at": {
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "schema": {
+          "const": "context-library/source-envelope",
+          "default": "context-library/source-envelope",
+          "title": "Schema",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "secret_spans": {
+          "items": {
+            "$ref": "#/$defs/SecretSpan"
+          },
+          "title": "Secret Spans",
+          "type": "array"
+        },
+        "source_type": {
+          "enum": [
+            "ticket",
+            "documentation",
+            "project-note",
+            "chat",
+            "meeting",
+            "idea",
+            "code",
+            "commit",
+            "other"
+          ],
+          "title": "Source Type",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        },
+        "uri": {
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "external_id",
+        "source_type",
+        "uri",
+        "title",
+        "retrieved_at",
+        "content_format",
+        "content"
+      ],
+      "title": "SourceEnvelope",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Proposal-only transfer from a private context harvester to the library.",
+  "properties": {
+    "batch_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/Candidate"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "canonical_write": {
+      "const": false,
+      "default": false,
+      "title": "Canonical Write",
+      "type": "boolean"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "idempotency_key": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/Observation"
+      },
+      "title": "Observations",
+      "type": "array"
+    },
+    "produced_at": {
+      "format": "date-time",
+      "title": "Produced At",
+      "type": "string"
+    },
+    "project": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Project",
+      "type": "string"
+    },
+    "redacted": {
+      "const": true,
+      "default": true,
+      "title": "Redacted",
+      "type": "boolean"
+    },
+    "schema": {
+      "const": "context-library/harvest-batch",
+      "default": "context-library/harvest-batch",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceEnvelope"
+      },
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "batch_id",
+    "idempotency_key",
+    "project",
+    "produced_at"
+  ],
+  "title": "HarvestBatch",
+  "type": "object"
+}

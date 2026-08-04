@@ -1,7 +1,6 @@
 .codanna/
 .codannaignore
 .fastembed_cache
-HANDOFF.md
 IMPLEMENTATION_PROMPT.md
 .context-library/
 .agents/*
