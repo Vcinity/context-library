@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "context-library"
-version = "0.3.1"
+version = "0.3.2"
 description = "Context Library Core, Maintainer, Manager, and read-only Codex Plugin"
 authors = ["Context Library Maintainers"]
 readme = "README.md"

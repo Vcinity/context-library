@@ -31,7 +31,7 @@ release to values approved for the deployment:
 
 ```sh
 REPOSITORY_URL="<context-library-repository-url>"
-RELEASE=v0.3.1
+RELEASE=v0.3.2
 PLUGIN_ROOT=/opt/context-library-plugin
 
 git clone \

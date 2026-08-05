@@ -1,6 +1,6 @@
 # Generated from context_library_core.canonical; do not edit.
-# source-version: 0.3.1
-# source-sha256: bf10ae3ceb340073b8538f4386789eff3780741c81fa288b0b44dab3255a86b7
+# source-version: 0.3.2
+# source-sha256: 488e140d581ae342df672454073c43e9a54dbe0af7d127139fa08a532061ee18
 from __future__ import annotations
 
 import dataclasses
@@ -367,7 +367,7 @@ def weakest_provenance(values: Iterable[str]) -> str:
 
 
 # Generated read-only contract metadata used by the self-contained Plugin.
-PRODUCT_VERSION = '0.3.1'
+PRODUCT_VERSION = '0.3.2'
 CONTEXT_POLICY_JSON_SCHEMA = {'additionalProperties': False,
  'properties': {'affected_layers': {'additionalProperties': {'type': 'string'},
                                     'title': 'Affected Layers',
