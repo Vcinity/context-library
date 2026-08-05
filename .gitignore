@@ -20,3 +20,6 @@ reviews/
 __pycache__/
 *.py[cod]
 .env
+
+# Private browser sessions
+.playwright-cli/

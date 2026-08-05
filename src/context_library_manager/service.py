@@ -4,6 +4,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
+from context_library_core.maintainer_contracts import HarvestBatch
 from context_library_maintainer.service import MaintainerApplicationService, MaintainerContext
 
 from .config import Settings
@@ -14,6 +15,64 @@ from .routing import route
 
 class SourceIdempotencyConflict(ValueError):
     pass
+
+
+def intake_harvest_batch(
+    store: Store,
+    settings: Settings,
+    project: str,
+    batch: HarvestBatch,
+    actor: str,
+    idempotency_key: str | None = None,
+) -> dict:
+    """Queue one validated, proposal-only harvest batch for the Manager worker."""
+    if batch.project != project:
+        raise ValueError("harvest batch project does not match request project")
+    key = idempotency_key or batch.idempotency_key
+    route_name = f"POST:/api/v1/projects/{project}/harvest-batches"
+    request_digest = store.digest(batch.model_dump(mode="json", by_alias=True))
+    with store._write_lock:
+        prior = store.db.execute(
+            "SELECT request_digest,response FROM idempotency_records WHERE actor=? "
+            "AND project=? AND route=? AND idempotency_key=?",
+            (actor, project, route_name, key),
+        ).fetchone()
+        if prior:
+            if prior["request_digest"] != request_digest:
+                raise SourceIdempotencyConflict("idempotency key was used for different harvest content")
+            response = json.loads(prior["response"])
+            return {**response, "created": False, "idempotent": True}
+        database = store.db
+        database.execute("BEGIN IMMEDIATE" if database.__class__.__name__ != "PostgresConnection" else "BEGIN")
+        try:
+            work_id, created = store.add_work(
+                project,
+                "harvest_batch",
+                key,
+                {"batch": batch.model_dump(mode="json", by_alias=True), "batch_id": batch.batch_id},
+                actor,
+                commit=False,
+            )
+            response = {"work_id": work_id, "batch_id": batch.batch_id, "status": "pending"}
+            database.execute(
+                "INSERT INTO idempotency_records VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    f"idem_{store.digest([actor, project, route_name, key])[:24]}",
+                    actor,
+                    project,
+                    route_name,
+                    key,
+                    request_digest,
+                    202,
+                    json.dumps(response, sort_keys=True),
+                    utc_now(),
+                ),
+            )
+            database.commit()
+            return {**response, "created": created, "idempotent": not created}
+        except Exception:
+            database.rollback()
+            raise
 
 
 def _resume_source_request(

@@ -305,6 +305,18 @@
           "title": "Location",
           "type": "string"
         },
+        "observation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Id"
+        },
         "occurred_at": {
           "anyOf": [
             {

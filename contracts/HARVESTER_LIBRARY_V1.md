@@ -42,7 +42,9 @@ The top-level payload MUST contain:
 The nested entries use the existing versioned Core contracts:
 
 - `source-envelope` for redacted source evidence;
-- `observation` for extracted evidence tied to a source;
+- `observation` for extracted evidence tied to a source. Each emitted
+  observation SHOULD include a stable `observation_id`; candidates and
+  findings use that ID when citing evidence;
 - `candidate` for an unreviewed context proposal;
 - `finding` for duplicate, supersession, relationship, or conflict signals.
 

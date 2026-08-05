@@ -15,6 +15,7 @@ from .models import (
     ConflictPacket,
     ConflictResolution,
     Finding,
+    HarvestBatch,
     Observation,
     Person,
     SourceEnvelope,
@@ -191,6 +192,114 @@ class MaintainerApplicationService:
             self._boundary(started)
             state.run_end(run_id, "ok", touched=[item["source_id"] for item in data])
             return {"run_id": run_id, "sources": data}
+        except Exception as exc:
+            state.run_end(run_id, "error", type(exc).__name__)
+            raise
+        finally:
+            state.db.close()
+
+    def ingest_harvest_batch(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Materialize one proposal-only harvester batch atomically.
+
+        The batch uses external source IDs and harvester-stable observation IDs;
+        this boundary resolves them to the Maintainer's local IDs before any
+        candidate or finding is stored. No candidate is published here.
+        """
+        batch = HarvestBatch.model_validate(payload)
+        if batch.project != self.context.project:
+            raise ValueError("harvest batch project does not match service context")
+        state = self._state()
+        run_id, started = self._run(state, "harvest batch", batch.idempotency_key)
+        try:
+            from .ingest import ingest
+
+            with state.transaction():
+                _, config, _, _ = project_files(self._settings())
+                source_results = ingest(
+                    state,
+                    [item.model_dump(mode="json", by_alias=True) for item in batch.sources],
+                    self.context.project,
+                    retain=config.policies.retain_source_content,
+                )
+                source_ids = {
+                    item.external_id: result["source_id"]
+                    for item, result in zip(batch.sources, source_results, strict=True)
+                }
+                observation_ids: dict[str, str] = {}
+                observation_results: list[dict[str, Any]] = []
+                for item in batch.observations:
+                    public_id = item.observation_id or ("obs_" + digest(item.model_dump(mode="json"))[:24])
+                    source_id = source_ids.get(item.source_id)
+                    if source_id is None:
+                        raise ValueError(f"harvest observation references unknown source: {item.source_id}")
+                    observation = Observation.model_validate(
+                        {
+                            **item.model_dump(mode="json", by_alias=True),
+                            "observation_id": None,
+                            "source_id": source_id,
+                        }
+                    )
+                    internal_id = "obs_" + digest(observation.model_dump(mode="json"))[:24]
+                    existing = state.db.execute(
+                        "SELECT id FROM observations WHERE id=? AND project=?",
+                        (internal_id, self.context.project),
+                    ).fetchone()
+                    if existing is None:
+                        state.add_observation(observation, internal_id, self.context.project)
+                    observation_ids[public_id] = internal_id
+                    observation_results.append({"observation_id": internal_id, "created": existing is None})
+
+                candidate_results: list[dict[str, Any]] = []
+                candidate_payloads: list[dict[str, Any]] = []
+                for candidate in batch.candidates:
+                    candidate_payload = candidate.model_dump(mode="json", by_alias=True)
+                    candidate_payload["source_observation_ids"] = [
+                        observation_ids.get(identifier, identifier) for identifier in candidate.source_observation_ids
+                    ]
+                    candidate_payload["applicability"]["evidence_observation_ids"] = [
+                        observation_ids.get(identifier, identifier)
+                        for identifier in candidate.applicability.evidence_observation_ids
+                    ]
+                    normalized = Candidate.model_validate(candidate_payload)
+                    existing = state.db.execute(
+                        "SELECT id FROM candidates WHERE id=? AND project=?",
+                        (normalized.candidate_id, self.context.project),
+                    ).fetchone()
+                    if existing is None:
+                        state.add_candidate(normalized)
+                    candidate_results.append({"candidate_id": normalized.candidate_id, "created": existing is None})
+                    candidate_payloads.append(normalized.model_dump(mode="json", by_alias=True))
+
+                finding_results: list[dict[str, Any]] = []
+                for finding in batch.findings:
+                    finding_payload = finding.model_dump(mode="json", by_alias=True)
+                    finding_payload["evidence_observation_ids"] = [
+                        observation_ids.get(identifier, identifier) for identifier in finding.evidence_observation_ids
+                    ]
+                    normalized = Finding.model_validate(finding_payload)
+                    already = state.db.execute(
+                        "SELECT 1 FROM findings WHERE candidate_id=? AND payload_json=?",
+                        (normalized.candidate_id, normalized.model_dump_json(by_alias=True)),
+                    ).fetchone()
+                    if already is None:
+                        state.add_finding(normalized, self.context.project)
+                    finding_results.append({"candidate_id": normalized.candidate_id, "created": already is None})
+
+                reconciliation = [
+                    reconcile(state, self._settings(), candidate.candidate_id) for candidate in batch.candidates
+                ]
+            self._boundary(started)
+            state.run_end(run_id, "ok")
+            return {
+                "run_id": run_id,
+                "batch_id": batch.batch_id,
+                "sources": source_results,
+                "observations": observation_results,
+                "candidates": candidate_results,
+                "candidate_payloads": candidate_payloads,
+                "findings": finding_results,
+                "reconciliation": reconciliation,
+            }
         except Exception as exc:
             state.run_end(run_id, "error", type(exc).__name__)
             raise

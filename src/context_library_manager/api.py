@@ -24,6 +24,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from context_library_core.maintainer_contracts import HarvestBatch
+
 from .agent_service import (
     ServiceConflict,
     complete_drain,
@@ -79,7 +81,7 @@ from .domain import (
 )
 from .library import LibraryError, LibraryReader, redact
 from .routing import route
-from .service import SourceIdempotencyConflict, intake_source
+from .service import SourceIdempotencyConflict, intake_harvest_batch, intake_source
 from .web import ROOT as WEB_ROOT
 from .web import render as render_template
 
@@ -1958,6 +1960,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status="ok" if result.get("status") == "succeeded" else "pending",
             data={**result, "idempotent": not result["created"]},
         )
+
+    @app.post("/api/v1/projects/{project}/harvest-batches")
+    def harvest_batch(
+        project: str,
+        body: HarvestBatch,
+        request: Request,
+        idempotency_key: Annotated[str | None, Header()] = None,
+    ):
+        """Accept a redacted, proposal-only private-harvester batch."""
+        require_project(request, project)
+        require_csrf(request)
+        require_capability(request, Capability.MAINTAIN, project)
+        try:
+            result = intake_harvest_batch(
+                app.state.store,
+                settings,
+                project,
+                body,
+                actor_for(request, "runtime:harvester"),
+                idempotency_key or body.idempotency_key,
+            )
+        except SourceIdempotencyConflict as exc:
+            raise HTTPException(
+                409,
+                {"code": "idempotency-conflict", "message": str(exc)},
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                422,
+                {"code": "invalid-harvest-batch", "message": str(exc)},
+            ) from exc
+        return envelope(request, status="pending", data=result)
 
     @app.post("/api/v1/projects/{project}/contributions")
     @serialized_store_write

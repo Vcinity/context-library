@@ -104,6 +104,75 @@ class Worker:
                 "human-retained-current",
             )
             return {"work_id": work_id, "route": "review", "status": "succeeded"}
+        if row["item_type"] == "harvest_batch":
+            maintainer = MaintainerApplicationService(
+                MaintainerContext(
+                    library_root=self.settings.library_root,
+                    state_root=self.settings.state_root,
+                    project=self.settings.project,
+                    actor=self.owner,
+                )
+            )
+            try:
+                result = maintainer.ingest_harvest_batch(payload["batch"])
+                has_conflict = any(item.get("conflicted") for item in result.get("reconciliation", []))
+                if has_conflict:
+                    self.store.create_review(
+                        self.settings.project,
+                        work_id,
+                        "Harvested candidates contain a reconciliation conflict.",
+                        ["review-in-manager"],
+                        [],
+                        self.owner,
+                    )
+                    self.store.transition(
+                        self.settings.project,
+                        work_id,
+                        "waiting-human",
+                        self.owner,
+                        "harvest-conflict",
+                    )
+                    return {
+                        "work_id": work_id,
+                        "route": "review",
+                        "status": "waiting-human",
+                        "reason": "harvest-conflict",
+                        "maintainer": result,
+                    }
+                for candidate in result.get("candidate_payloads", []):
+                    self.store.add_work(
+                        self.settings.project,
+                        "candidate_task",
+                        f"harvest:{result['batch_id']}:{candidate['candidate_id']}",
+                        {
+                            "clm_payload": candidate,
+                            "preloaded_candidate": True,
+                            "publication_intent": True,
+                            "evidence": candidate.get("source_observation_ids", []),
+                        },
+                        self.owner,
+                    )
+                self.store.transition(self.settings.project, work_id, "succeeded", self.owner)
+                return {
+                    "work_id": work_id,
+                    "route": "deterministic",
+                    "status": "succeeded",
+                    "maintainer": result,
+                }
+            except Exception as exc:
+                self.store.transition(
+                    self.settings.project,
+                    work_id,
+                    "failed",
+                    self.owner,
+                    type(exc).__name__,
+                )
+                return {
+                    "work_id": work_id,
+                    "route": "deterministic",
+                    "status": "failed",
+                    "reason": type(exc).__name__,
+                }
         if row["item_type"] in {"source_batch", "publication_task"}:
             self.store.transition(self.settings.project, work_id, "succeeded", self.owner)
             return {"work_id": work_id, "route": "deterministic", "status": "succeeded"}
@@ -230,6 +299,11 @@ class Worker:
                 result = (
                     maintainer.add_observation(payload["clm_payload"])
                     if row["item_type"] == "observation_task"
+                    else {
+                        "candidate_id": payload["clm_payload"]["candidate_id"],
+                        "preloaded": True,
+                    }
+                    if payload.get("preloaded_candidate")
                     else maintainer.add_candidate(payload["clm_payload"])
                 )
                 if row["item_type"] == "candidate_task":

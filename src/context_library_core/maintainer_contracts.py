@@ -134,6 +134,7 @@ Derivation = Literal["direct", "condensed", "synthesized"]
 class Observation(StrictModel):
     schema_id: Literal["context-library/observation"] = Field(default="context-library/observation", alias="schema")
     schema_version: Literal[1] = 1
+    observation_id: str | None = None
     source_id: str
     kind: ObservationKind
     excerpt: str
