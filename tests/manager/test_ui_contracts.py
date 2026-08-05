@@ -24,6 +24,7 @@ from context_library_manager.contracts import (
     SessionIdentity,
 )
 from context_library_manager.db import Store
+from context_library_manager.migrations import apply_migrations
 from context_library_manager.postgres import PostgresConnection
 
 
@@ -297,6 +298,45 @@ def test_postgres_migrations_generate_server_appropriate_sql():
     assert all("AUTOINCREMENT" not in statement for statement in statements)
     assert all("BEGIN IMMEDIATE" not in statement for statement in statements)
     assert any("ON CONFLICT(singleton) DO NOTHING" in item for item in statements)
+
+
+def test_postgres_migration_lock_precedes_bootstrap_table_creation():
+    class Cursor:
+        def fetchone(self):
+            return None
+
+        def fetchall(self):
+            return []
+
+    class RecordingConnection:
+        dialect = "postgres"
+
+        def __init__(self):
+            self.statements = []
+
+        def execute(self, statement, params=()):
+            self.statements.append(statement)
+            return Cursor()
+
+        def executescript(self, script):
+            self.statements.append(script)
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+    db = RecordingConnection()
+    apply_migrations(db)
+
+    lock_index = next(index for index, statement in enumerate(db.statements) if "pg_advisory_xact_lock" in statement)
+    table_index = next(
+        index
+        for index, statement in enumerate(db.statements)
+        if "CREATE TABLE IF NOT EXISTS runtime_migrations" in statement
+    )
+    assert lock_index < table_index
 
 
 def test_packaged_migration_assets_are_discoverable():

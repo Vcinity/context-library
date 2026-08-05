@@ -22,7 +22,15 @@ def test_production_heartbeat_loop_runs_independently_of_worker_work(tmp_path):
         args=("worker", app.state.settings, stop, 0.01),
     )
     thread.start()
-    time.sleep(0.04)
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline:
+        rows = app.state.store.db.execute(
+            "SELECT producer,COUNT(*) AS n FROM telemetry_events WHERE event_type='heartbeat' GROUP BY producer"
+        ).fetchall()
+        counts = {row["producer"]: row["n"] for row in rows}
+        if counts.get("work", 0) >= 2 and counts.get("agent", 0) >= 2:
+            break
+        time.sleep(0.01)
     stop.set()
     thread.join(timeout=1)
     assert not thread.is_alive()

@@ -8,8 +8,23 @@ from context_library_manager.domain import utc_now
 
 def apply_migrations(db) -> None:
     dialect = "sqlite" if isinstance(db, sqlite3.Connection) or getattr(db, "dialect", None) == "sqlite" else "postgres"
-    db.execute("CREATE TABLE IF NOT EXISTS runtime_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)")
-    db.commit()
+    if dialect == "postgres":
+        db.execute("BEGIN")
+        try:
+            db.execute(
+                "SELECT pg_advisory_xact_lock(hashtext(?))",
+                ("context-library-manager:migrations",),
+            ).fetchone()
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS runtime_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+    else:
+        db.execute("CREATE TABLE IF NOT EXISTS runtime_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)")
+        db.commit()
     applied = {row["version"] for row in db.execute("SELECT version FROM runtime_migrations").fetchall()}
     if "v1" in applied and "001_initial" not in applied:
         db.execute(
