@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.3.2 - Unreleased
+## 0.3.3 - 2026-08-07
+
+- Add Manager harvest batch intake for coordinated library harvesting.
+
+## 0.3.2
 
 - Consolidate Core, Maintainer, Manager, frontend, and Plugin into one
   versioned monorepo release.
