@@ -31,7 +31,7 @@ release to values approved for the deployment:
 
 ```sh
 REPOSITORY_URL="<context-library-repository-url>"
-RELEASE=v0.3.3
+RELEASE=v0.3.4
 PLUGIN_ROOT=/opt/context-library-plugin
 
 git clone \
@@ -92,12 +92,14 @@ permissions. Configure it once in the Plugin source before installing:
 
 ```sh
 python3 "$PLUGIN_ROOT/plugins/context-library/scripts/configure.py" \
-  --library-root "${CANONICAL_LIBRARY_ROOT}"
+  --library-root "${CANONICAL_LIBRARY_ROOT}" \
+  --marketplace-name "${MARKETPLACE_NAME}"
 ```
 
-The command creates an untracked `runtime-config.json` in the Plugin directory.
-That file is part of the local marketplace source, so installs from the
-`/plugin` menu and `codex plugin add` receive the same configuration. It is
+The command creates an untracked `runtime-config.json` in the Plugin directory
+and assigns the deployment marketplace name without changing the public source
+default. That file is part of the local marketplace source, so installs from
+the `/plugin` menu and `codex plugin add` receive the same configuration. It is
 read by both the bundled MCP server and projection commands. Do not put
 credentials or write-capable Manager settings in it or in the Plugin manifest.
 
@@ -129,7 +131,7 @@ Plugin entry declared by `.agents/plugins/marketplace.json`:
 
 ```sh
 codex plugin marketplace add "$PLUGIN_ROOT"
-codex plugin add context-library@context-library
+codex plugin add "context-library@${MARKETPLACE_NAME}"
 ```
 
 Codex installs and enables the Plugin from either the `/plugin` menu or the

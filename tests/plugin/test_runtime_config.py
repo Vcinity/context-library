@@ -107,6 +107,53 @@ def test_configure_script_creates_valid_deployment_local_config(tmp_path):
     }
 
 
+def test_configure_script_renames_deployment_marketplace(tmp_path):
+    library = tmp_path / "library"
+    library.mkdir()
+    output = tmp_path / "plugin/runtime-config.json"
+    marketplace = tmp_path / "marketplace/.agents/plugins/marketplace.json"
+    marketplace.parent.mkdir(parents=True)
+    marketplace.write_text(
+        json.dumps(
+            {
+                "name": "context-library",
+                "interface": {"displayName": "Context Library"},
+                "plugins": [
+                    {
+                        "name": "context-library",
+                        "source": {"source": "local", "path": "./plugins/context-library"},
+                        "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                        "category": "Productivity",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(PLUGIN / "scripts/configure.py"),
+            "--library-root",
+            str(library),
+            "--output",
+            str(output),
+            "--marketplace-name",
+            "team-context",
+            "--marketplace-path",
+            str(marketplace),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.stdout.splitlines() == [str(output), str(marketplace)]
+    payload = json.loads(marketplace.read_text(encoding="utf-8"))
+    assert payload["name"] == "team-context"
+    assert payload["interface"] == {"displayName": "Context Library"}
+    assert payload["plugins"][0]["source"] == {"source": "local", "path": "./plugins/context-library"}
+
+
 def test_configure_script_preserves_existing_config_when_new_values_are_invalid(tmp_path):
     library = tmp_path / "library"
     library.mkdir()
@@ -130,3 +177,31 @@ def test_configure_script_preserves_existing_config_when_new_values_are_invalid(
     assert completed.returncode == 2
     assert "stable lowercase identifier" in completed.stderr
     assert output.read_text(encoding="utf-8") == original
+
+
+def test_configure_script_rejects_invalid_marketplace_before_writing_runtime_config(tmp_path):
+    library = tmp_path / "library"
+    library.mkdir()
+    output = tmp_path / "runtime-config.json"
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"name":"old","plugins":[]}\n', encoding="utf-8")
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(PLUGIN / "scripts/configure.py"),
+            "--library-root",
+            str(library),
+            "--output",
+            str(output),
+            "--marketplace-name",
+            "team-context",
+            "--marketplace-path",
+            str(marketplace),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 2
+    assert "exactly one context-library" in completed.stderr
+    assert not output.exists()
+    assert marketplace.read_text(encoding="utf-8") == '{"name":"old","plugins":[]}\n'

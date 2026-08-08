@@ -2,8 +2,12 @@
 
 ## Unreleased
 
+## 0.3.4 - 2026-08-08
+
 - Add deployment-time Plugin runtime configuration shared by the MCP server
   and session-start hook, while preserving environment-variable overrides.
+- Allow deployments to assign a marketplace name without changing the public
+  marketplace default.
 - Document Codex hook review/trust and new-thread requirements for installs
   performed through the Plugin menu.
 

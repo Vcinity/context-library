@@ -35,12 +35,14 @@ Configure a compatible read-only checkout before installation:
 
 ```bash
 python3 plugins/context-library/scripts/configure.py \
-  --library-root /absolute/path/to/canonical-library
+  --library-root /absolute/path/to/canonical-library \
+  --marketplace-name organization-marketplace
 ```
 
 This creates the untracked `plugins/context-library/runtime-config.json` used
-by both the MCP server and session hook. Deployment automation may also supply
-an explicit project or context requirement. `CONTEXT_LIBRARY_ROOT`,
+by both the MCP server and session hook and updates only the deployment
+marketplace's top-level name. Deployment automation may also supply an explicit
+project or context requirement. `CONTEXT_LIBRARY_ROOT`,
 `CONTEXT_LIBRARY_PROJECT`, and `CONTEXT_LIBRARY_CONTEXT_REQUIREMENT` remain
 runtime overrides. Read/search MCP calls still require an explicit project
 argument, and projection refuses activation roots that overlap the canonical
@@ -50,7 +52,7 @@ Install from a local checkout with:
 
 ```bash
 codex plugin marketplace add .
-codex plugin add context-library@context-library
+codex plugin add context-library@organization-marketplace
 ```
 
 Start a new Codex thread after install or reinstall so Codex reloads the

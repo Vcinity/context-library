@@ -685,12 +685,13 @@ It MUST include:
 - deterministic packaging and validation.
 
 The Plugin MAY include a deployment-generated runtime configuration containing
-the canonical read root and explicit host policy defaults. That configuration
-MUST use a versioned schema, MUST NOT contain credentials or write authority,
-and MUST remain outside version control by default. Environment variables MAY
-override equivalent bundled values at runtime. Public release artifacts MUST
-exclude machine-local runtime configuration unless a packager supplies it
-explicitly.
+the canonical read root and explicit host policy defaults. A deployment MAY
+also assign its own marketplace name without changing the public source
+default. Deployment configuration MUST use a versioned schema, MUST NOT contain
+credentials or write authority, and MUST remain outside version control by
+default. Environment variables MAY override equivalent bundled values at
+runtime. Public release artifacts MUST exclude machine-local runtime
+configuration unless a packager supplies it explicitly.
 
 ### 12.2 Absolute canonical read-only rule
 
