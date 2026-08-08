@@ -684,6 +684,14 @@ It MUST include:
 - consumer-local projection and check operations; and
 - deterministic packaging and validation.
 
+The Plugin MAY include a deployment-generated runtime configuration containing
+the canonical read root and explicit host policy defaults. That configuration
+MUST use a versioned schema, MUST NOT contain credentials or write authority,
+and MUST remain outside version control by default. Environment variables MAY
+override equivalent bundled values at runtime. Public release artifacts MUST
+exclude machine-local runtime configuration unless a packager supplies it
+explicitly.
+
 ### 12.2 Absolute canonical read-only rule
 
 The Plugin MUST NOT:
@@ -798,6 +806,11 @@ The session-start hook MUST:
 
 The hook MUST NOT auto-select a project merely because it is the only available
 pack.
+
+Codex installations MUST document that plugin command hooks require explicit
+review and trust before they run, and that a newly installed session-start hook
+does not run retroactively in the installation session. The Plugin MUST remain
+useful through its skill and read-only MCP server while hook trust is pending.
 
 ### 12.7 Skill behavior
 

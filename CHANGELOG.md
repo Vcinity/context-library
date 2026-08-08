@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add deployment-time Plugin runtime configuration shared by the MCP server
+  and session-start hook, while preserving environment-variable overrides.
+- Document Codex hook review/trust and new-thread requirements for installs
+  performed through the Plugin menu.
+
 ## 0.3.3 - 2026-08-07
 
 - Add Manager harvest batch intake for coordinated library harvesting.

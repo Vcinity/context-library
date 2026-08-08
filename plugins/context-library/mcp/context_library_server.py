@@ -12,8 +12,8 @@ if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
 from generated.core_runtime import PRODUCT_VERSION, discover_packs, parse_register, resolve_pack  # noqa: E402
+from runtime_config import RuntimeConfigError, setting  # noqa: E402
 
-ROOT_ENV = "CONTEXT_LIBRARY_ROOT"
 PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_PROTOCOL_VERSIONS = {
     "2024-11-05",
@@ -39,7 +39,10 @@ class McpError(Exception):
 
 
 def library_root() -> Path:
-    configured = os.environ.get(ROOT_ENV)
+    try:
+        configured = setting("library_root").value
+    except RuntimeConfigError as exc:
+        raise McpError(str(exc)) from exc
     if not configured:
         raise McpError("context library root is not configured")
     return Path(configured).expanduser().resolve()

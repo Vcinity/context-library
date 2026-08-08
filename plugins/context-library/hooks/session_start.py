@@ -34,7 +34,8 @@ def required_notice(
 def main() -> None:
     root = projection.activation_root()
     try:
-        environment_requirement = projection.environment_context_requirement()
+        requirement_setting = projection.context_requirement_setting()
+        environment_requirement = requirement_setting.value
     except projection.ProjectionError:
         return
     if environment_requirement == "disabled":
@@ -43,7 +44,7 @@ def main() -> None:
         policy = projection.resolve_context_policy(root)
     except (OSError, projection.ProjectionError) as exc:
         requirement = environment_requirement
-        source = "environment" if environment_requirement is not None else None
+        source = requirement_setting.source
         if isinstance(exc, projection.PolicyError):
             requirement = requirement or exc.requirement
             source = source or exc.source

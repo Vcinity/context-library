@@ -8,6 +8,7 @@ This plugin packages the shared context-library skill for Codex.
 - `.mcp.json` for the bundled read-only MCP server
 - `hooks/hooks.json` and `hooks/session_start.py` for repository-local
   activation
+- `scripts/configure.py` for optional deployment-time runtime configuration
 - `mcp/context_library_server.py` for shared-library access tools
 - `skills/context-library/SKILL.md` for the agent workflow
 - `skills/context-library/references/` for reusable guidance on usage,
@@ -30,10 +31,20 @@ The bundled `context_library` MCP server exposes read-only tools:
 
 Codex exposes these as `mcp__context_library__*` tools.
 
-Set `CONTEXT_LIBRARY_ROOT` to a compatible read-only checkout or fixture.
-The Plugin has no fallback library location, and read/search MCP calls require
-an explicit project argument. Projection refuses activation roots that overlap
-the canonical checkout in either direction.
+Configure a compatible read-only checkout before installation:
+
+```bash
+python3 plugins/context-library/scripts/configure.py \
+  --library-root /absolute/path/to/canonical-library
+```
+
+This creates the untracked `plugins/context-library/runtime-config.json` used
+by both the MCP server and session hook. Deployment automation may also supply
+an explicit project or context requirement. `CONTEXT_LIBRARY_ROOT`,
+`CONTEXT_LIBRARY_PROJECT`, and `CONTEXT_LIBRARY_CONTEXT_REQUIREMENT` remain
+runtime overrides. Read/search MCP calls still require an explicit project
+argument, and projection refuses activation roots that overlap the canonical
+checkout in either direction.
 
 Install from a local checkout with:
 
@@ -44,6 +55,12 @@ codex plugin add context-library@context-library
 
 Start a new Codex thread after install or reinstall so Codex reloads the
 updated skill set.
+
+Codex does not run a newly installed `SessionStart` hook retroactively in the
+installation thread. It also skips non-managed plugin hooks until the exact
+hook definition is reviewed and trusted. After installing through `/plugin`,
+open `/hooks`, review and trust the Context Library hook, then start a new
+thread. The skill and MCP server remain available while hook trust is pending.
 
 The trusted session-start hook acts only on explicit context policy and project
 binding. Required unavailable context produces an advisory notice. Optional

@@ -20,6 +20,7 @@ reviews/
 __pycache__/
 *.py[cod]
 .env
+plugins/context-library/runtime-config.json
 
 # Private browser sessions
 .playwright-cli/

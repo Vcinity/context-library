@@ -88,17 +88,34 @@ monorepo tag.
 
 Make the separately governed canonical checkout available to the user or
 service that launches Codex. Prefer a read-only mount or equivalent filesystem
-permissions:
+permissions. Configure it once in the Plugin source before installing:
 
 ```sh
-export CONTEXT_LIBRARY_ROOT="${CANONICAL_LIBRARY_ROOT}"
-test -d "$CONTEXT_LIBRARY_ROOT"
-test -r "$CONTEXT_LIBRARY_ROOT"
+python3 "$PLUGIN_ROOT/plugins/context-library/scripts/configure.py" \
+  --library-root "${CANONICAL_LIBRARY_ROOT}"
 ```
 
-Do not place this value, credentials, or write-capable Manager settings in the
-Plugin manifest. `CONTEXT_LIBRARY_ROOT` is read by the bundled MCP server and
-projection commands at runtime.
+The command creates an untracked `runtime-config.json` in the Plugin directory.
+That file is part of the local marketplace source, so installs from the
+`/plugin` menu and `codex plugin add` receive the same configuration. It is
+read by both the bundled MCP server and projection commands. Do not put
+credentials or write-capable Manager settings in it or in the Plugin manifest.
+
+For an explicitly configured ZIP artifact, embed that generated file with:
+
+```sh
+poetry run python scripts/build_plugin.py \
+  --runtime-config "$PLUGIN_ROOT/plugins/context-library/runtime-config.json"
+```
+
+Normal public `make plugin-build` artifacts exclude runtime configuration.
+The configured path must exist on the machine where Codex runs.
+
+Environment variables remain higher-precedence runtime overrides:
+
+- `CONTEXT_LIBRARY_ROOT`
+- `CONTEXT_LIBRARY_PROJECT`
+- `CONTEXT_LIBRARY_CONTEXT_REQUIREMENT`
 
 If the consumer uses projection, select the project explicitly in the
 consumer's committed `.context-library/config.json`, or set
@@ -115,15 +132,20 @@ codex plugin marketplace add "$PLUGIN_ROOT"
 codex plugin add context-library@context-library
 ```
 
-Start a new Codex thread after installation or upgrade so the skill, hook, and
-MCP server are loaded from the selected release.
+Codex installs and enables the Plugin from either the `/plugin` menu or the
+command above. Plugin command hooks require a separate trust decision: open
+`/hooks`, review and trust the Context Library hook, and then start a new Codex
+thread. A newly installed `SessionStart` hook cannot run retroactively in the
+installation thread. Until it is trusted, Codex intentionally skips automatic
+projection, while the skill and read-only MCP server remain available.
 
 The marketplace registration supplies code distribution only. It does not
 grant canonical write authority and does not replace the Manager review path.
 
 ## Verify the installation
 
-From a consumer workspace with `CONTEXT_LIBRARY_ROOT` configured:
+From a consumer workspace with the Plugin runtime configuration present (or
+`CONTEXT_LIBRARY_ROOT` set as an override):
 
 ```sh
 python3 "$PLUGIN_ROOT/plugins/context-library/projection.py" check \

@@ -30,6 +30,7 @@ from generated.core_runtime import (
 from generated.core_runtime import (
     discover_packs as core_discover_packs,
 )
+from runtime_config import RuntimeConfigError, Setting, setting
 
 CONFIG_PATH = Path(".context-library/config.json")
 SIDECAR_PATH = Path(".context-library/projection.json")
@@ -147,7 +148,10 @@ def activation_root(cwd: Path | None = None) -> Path:
 
 
 def library_root() -> Path:
-    configured = os.environ.get("CONTEXT_LIBRARY_ROOT")
+    try:
+        configured = setting("library_root").value
+    except RuntimeConfigError as exc:
+        raise ProjectionError(str(exc)) from exc
     if not configured:
         raise ProjectionError("Context Library source is unavailable: CONTEXT_LIBRARY_ROOT is not configured")
     return Path(configured).expanduser().resolve()
@@ -173,8 +177,15 @@ def _read_json(path: Path) -> object:
         raise ProjectionError(f"unable to read valid JSON from {path}: {exc}") from exc
 
 
+def context_requirement_setting() -> Setting:
+    try:
+        return setting("context_requirement")
+    except RuntimeConfigError as exc:
+        raise ProjectionError(str(exc)) from exc
+
+
 def environment_context_requirement() -> str | None:
-    requirement = os.environ.get("CONTEXT_LIBRARY_CONTEXT_REQUIREMENT")
+    requirement = context_requirement_setting().value
     if requirement is not None and requirement not in {"required", "optional", "disabled"}:
         raise ProjectionError(f"invalid context requirement: {requirement}")
     return requirement
@@ -206,9 +217,10 @@ def _validate_declared_policy(payload: dict[str, object], path: Path) -> None:
 
 
 def resolve_context_policy(root: Path) -> ContextPolicy:
-    environment_requirement = environment_context_requirement()
+    requirement_setting = context_requirement_setting()
+    environment_requirement = requirement_setting.value
     if environment_requirement == "disabled":
-        return ContextPolicy(requirement="disabled", project=None, source="environment")
+        return ContextPolicy(requirement="disabled", project=None, source=requirement_setting.source)
     path = root / CONFIG_PATH
     payload: dict[str, object] = {}
     if path.is_file():
@@ -224,12 +236,20 @@ def resolve_context_policy(root: Path) -> ContextPolicy:
     requirement = str(raw_requirement) if raw_requirement is not None else "undetermined"
     if requirement not in {"required", "optional", "disabled", "undetermined"}:
         raise ProjectionError(f"invalid context requirement: {requirement}")
-    project_value = os.environ.get("CONTEXT_LIBRARY_PROJECT") or payload.get("project")
+    try:
+        project_setting = setting("project")
+    except RuntimeConfigError as exc:
+        raise ProjectionError(str(exc)) from exc
+    project_value = project_setting.value or payload.get("project")
     project = str(project_value) if project_value is not None else None
     if project is not None and not ID_RE.fullmatch(project):
         raise ProjectionError("configured project must be a stable lowercase identifier")
     source = (
-        "environment" if environment_requirement is not None else str(path) if raw_requirement is not None else None
+        requirement_setting.source
+        if environment_requirement is not None
+        else str(path)
+        if raw_requirement is not None
+        else None
     )
     return ContextPolicy(requirement=requirement, project=project, source=source)
 
@@ -264,7 +284,10 @@ def load_config(root: Path, available: Mapping[str, tuple[Path, str]]) -> Config
     if unknown:
         raise ProjectionError(f"unknown project configuration field: {sorted(unknown)[0]}")
     _validate_declared_policy(payload, path)
-    project_override = os.environ.get("CONTEXT_LIBRARY_PROJECT")
+    try:
+        project_override = setting("project").value
+    except RuntimeConfigError as exc:
+        raise ProjectionError(str(exc)) from exc
     configured = project_override or payload.get("project")
     projects = sorted(available)
     if configured is None:
@@ -829,9 +852,7 @@ def prepare(root: Path) -> Compilation:
     if requirement == "disabled":
         raise ProjectionError("consumer projection is disabled by explicit context policy")
     if requirement == "undetermined":
-        raise ProjectionError(
-            "consumer projection requires an explicit required or optional context policy"
-        )
+        raise ProjectionError("consumer projection requires an explicit required or optional context policy")
     source_root = library_root()
     resolved_root = root.resolve()
     if resolved_root == source_root or source_root in resolved_root.parents or resolved_root in source_root.parents:

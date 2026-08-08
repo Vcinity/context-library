@@ -9,6 +9,8 @@ boundaries:
 - Manager owns authenticated intake, orchestration, review, audit, telemetry,
   and the operator web application.
 - The installable Plugin is a self-contained, canonical-read-only integration.
+  It supports deployment-time configuration shared by its MCP server and
+  trusted session-start hook.
 
 Canonical decision data remains in a separately governed repository. This
 monorepo contains no canonical project pack.
