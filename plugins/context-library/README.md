@@ -31,29 +31,24 @@ The bundled `context_library` MCP server exposes read-only tools:
 
 Codex exposes these as `mcp__context_library__*` tools.
 
-Configure a compatible read-only checkout before installation:
+From the monorepo or a documented sparse source checkout, stage and install a
+compatible read-only deployment without changing the source checkout:
 
 ```bash
-python3 plugins/context-library/scripts/configure.py \
+python3 scripts/install_plugin.py \
+  --destination /opt/context-library-plugin-v0.3.4 \
   --library-root /absolute/path/to/canonical-library \
   --marketplace-name organization-marketplace
 ```
 
-This creates the untracked `plugins/context-library/runtime-config.json` used
-by both the MCP server and session hook and updates only the deployment
-marketplace's top-level name. Deployment automation may also supply an explicit
-project or context requirement. `CONTEXT_LIBRARY_ROOT`,
+This stages only the Plugin marketplace files, creates the deployment-local
+`runtime-config.json`, and registers and installs that staged marketplace.
+Deployment automation may add `--stage-only` or supply an explicit project or
+context requirement. `CONTEXT_LIBRARY_ROOT`,
 `CONTEXT_LIBRARY_PROJECT`, and `CONTEXT_LIBRARY_CONTEXT_REQUIREMENT` remain
 runtime overrides. Read/search MCP calls still require an explicit project
 argument, and projection refuses activation roots that overlap the canonical
 checkout in either direction.
-
-Install from a local checkout with:
-
-```bash
-codex plugin marketplace add .
-codex plugin add context-library@organization-marketplace
-```
 
 Start a new Codex thread after install or reinstall so Codex reloads the
 updated skill set.

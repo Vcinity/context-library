@@ -2,11 +2,22 @@ SHELL := /bin/sh
 
 MARKDOWN_FILES := AGENTS.md ARCHITECTURE.md CHANGELOG.md IMPLEMENTATION_PROMPT.md MIGRATION.md README.md SPEC.md docs/DEPLOYMENT.md docs/PLUGIN_DEPLOYMENT.md docs/RECOVERY.md docs/TOOL_USE_CASES.md
 
-.PHONY: install test lint format check contracts contracts-check plugin-build plugin-check ui-build ui-test e2e smoke package run openapi openapi-check
+.PHONY: install plugin-install test lint format check contracts contracts-check plugin-build plugin-check ui-build ui-test e2e smoke package run openapi openapi-check
 
 install:
 	poetry sync --no-interaction
 	npm ci --ignore-scripts
+
+plugin-install:
+	@test -n "$(PLUGIN_DEST)" || { echo "PLUGIN_DEST is required" >&2; exit 2; }
+	@test -n "$(LIBRARY_ROOT)" || { echo "LIBRARY_ROOT is required" >&2; exit 2; }
+	poetry run python scripts/install_plugin.py \
+		--destination "$(PLUGIN_DEST)" \
+		--library-root "$(LIBRARY_ROOT)" \
+		$(if $(MARKETPLACE_NAME),--marketplace-name "$(MARKETPLACE_NAME)") \
+		$(if $(PROJECT),--project "$(PROJECT)") \
+		$(if $(CONTEXT_REQUIREMENT),--context-requirement "$(CONTEXT_REQUIREMENT)") \
+		$(if $(STAGE_ONLY),--stage-only)
 
 test: install
 	poetry run pytest

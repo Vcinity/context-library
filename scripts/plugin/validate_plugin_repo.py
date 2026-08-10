@@ -112,6 +112,7 @@ def validate_plugin_manifest() -> None:
     check_exists(ROOT / "plugins" / "context-library" / "hooks" / "session_start.py", "session-start hook")
     check_exists(ROOT / "plugins" / "context-library" / "runtime_config.py", "Plugin runtime configuration loader")
     check_exists(ROOT / "plugins" / "context-library" / "scripts" / "configure.py", "Plugin configurator")
+    check_exists(ROOT / "scripts" / "install_plugin.py", "Plugin installer")
     check_exists(ROOT / "plugins" / "context-library" / "projection.py", "projection compiler")
     projection = read_text(ROOT / "plugins" / "context-library" / "projection.py")
     if "def ensure_generic(" in projection:

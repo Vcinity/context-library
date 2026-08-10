@@ -693,6 +693,14 @@ default. Environment variables MAY override equivalent bundled values at
 runtime. Public release artifacts MUST exclude machine-local runtime
 configuration unless a packager supplies it explicitly.
 
+The monorepo MUST provide a Plugin installation command that accepts an
+explicit deployment destination and canonical library root. The command MUST
+stage only the marketplace manifest and Plugin files at that destination,
+create deployment-local runtime configuration in the staged copy, and leave
+the source or sparse release checkout unchanged. It MUST support staging
+without Codex registration for deployment automation and MUST otherwise
+register the staged marketplace and install its Plugin entry.
+
 ### 12.2 Absolute canonical read-only rule
 
 The Plugin MUST NOT:

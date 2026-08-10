@@ -15,6 +15,7 @@ A Plugin-only deployment needs only these paths from a tagged monorepo release:
 ```text
 .agents/plugins/marketplace.json
 plugins/context-library/
+scripts/install_plugin.py
 ```
 
 The sparse checkout does not need Python dependencies, Poetry, Node.js, the
@@ -32,7 +33,7 @@ release to values approved for the deployment:
 ```sh
 REPOSITORY_URL="<context-library-repository-url>"
 RELEASE=v0.3.4
-PLUGIN_ROOT=/opt/context-library-plugin
+SOURCE_ROOT=/opt/context-library-plugin-source
 
 git clone \
   --filter=blob:none \
@@ -40,38 +41,40 @@ git clone \
   --depth 1 \
   --branch "$RELEASE" \
   "$REPOSITORY_URL" \
-  "$PLUGIN_ROOT"
+  "$SOURCE_ROOT"
 
-git -C "$PLUGIN_ROOT" sparse-checkout init --no-cone
-git -C "$PLUGIN_ROOT" sparse-checkout set \
+git -C "$SOURCE_ROOT" sparse-checkout init --no-cone
+git -C "$SOURCE_ROOT" sparse-checkout set \
   .agents/plugins/marketplace.json \
-  plugins/context-library
-git -C "$PLUGIN_ROOT" checkout --detach "$RELEASE"
+  plugins/context-library \
+  scripts/install_plugin.py
+git -C "$SOURCE_ROOT" checkout --detach "$RELEASE"
 ```
 
 For an existing sparse checkout, fetch the release tag and select it without
 expanding the checkout:
 
 ```sh
-git -C "$PLUGIN_ROOT" fetch --depth 1 origin tag "$RELEASE"
-git -C "$PLUGIN_ROOT" checkout --detach "$RELEASE"
+git -C "$SOURCE_ROOT" fetch --depth 1 origin tag "$RELEASE"
+git -C "$SOURCE_ROOT" checkout --detach "$RELEASE"
 ```
 
 The checkout should contain the marketplace manifest and Plugin directory but
 not the rest of the monorepo:
 
 ```sh
-test -f "$PLUGIN_ROOT/.agents/plugins/marketplace.json"
-test -f "$PLUGIN_ROOT/plugins/context-library/.codex-plugin/plugin.json"
-test ! -e "$PLUGIN_ROOT/src"
-test ! -e "$PLUGIN_ROOT/frontend"
-git -C "$PLUGIN_ROOT" describe --exact-match --tags HEAD
+test -f "$SOURCE_ROOT/.agents/plugins/marketplace.json"
+test -f "$SOURCE_ROOT/plugins/context-library/.codex-plugin/plugin.json"
+test -f "$SOURCE_ROOT/scripts/install_plugin.py"
+test ! -e "$SOURCE_ROOT/src"
+test ! -e "$SOURCE_ROOT/frontend"
+git -C "$SOURCE_ROOT" describe --exact-match --tags HEAD
 ```
 
 Confirm the Plugin version before installing it:
 
 ```sh
-python3 - "$PLUGIN_ROOT/plugins/context-library/.codex-plugin/plugin.json" <<'PY'
+python3 - "$SOURCE_ROOT/plugins/context-library/.codex-plugin/plugin.json" <<'PY'
 import json
 import sys
 
@@ -84,30 +87,51 @@ PY
 The reported version must match the Manager release deployed from the same
 monorepo tag.
 
-## Configure the canonical read root
+## Stage, configure, and install
 
 Make the separately governed canonical checkout available to the user or
 service that launches Codex. Prefer a read-only mount or equivalent filesystem
-permissions. Configure it once in the Plugin source before installing:
+permissions. Install to a new explicit deployment destination:
 
 ```sh
-python3 "$PLUGIN_ROOT/plugins/context-library/scripts/configure.py" \
+MARKETPLACE_ROOT="/opt/context-library-plugin-${RELEASE}"
+
+python3 "$SOURCE_ROOT/scripts/install_plugin.py" \
+  --destination "$MARKETPLACE_ROOT" \
   --library-root "${CANONICAL_LIBRARY_ROOT}" \
   --marketplace-name "${MARKETPLACE_NAME}"
 ```
 
-The command creates an untracked `runtime-config.json` in the Plugin directory
-and assigns the deployment marketplace name without changing the public source
-default. That file is part of the local marketplace source, so installs from
-the `/plugin` menu and `codex plugin add` receive the same configuration. It is
-read by both the bundled MCP server and projection commands. Do not put
-credentials or write-capable Manager settings in it or in the Plugin manifest.
+The command copies only the marketplace manifest and Plugin into
+`MARKETPLACE_ROOT`, creates `runtime-config.json` in that staged Plugin, and
+then registers and installs it with Codex. It does not change `SOURCE_ROOT`.
+The destination must not already exist; use a release-specific destination so
+upgrades and rollbacks remain explicit. Omit `--marketplace-name` to retain the
+public `context-library` marketplace name.
+
+From a full monorepo checkout, the equivalent Make target is:
+
+```sh
+make plugin-install \
+  PLUGIN_DEST="$MARKETPLACE_ROOT" \
+  LIBRARY_ROOT="$CANONICAL_LIBRARY_ROOT" \
+  MARKETPLACE_NAME="$MARKETPLACE_NAME"
+```
+
+Use `--stage-only`, or `STAGE_ONLY=1` with Make, to create the configured
+marketplace without changing Codex registration. Optional `--project` and
+`--context-requirement` arguments are also exposed as `PROJECT` and
+`CONTEXT_REQUIREMENT` Make variables.
+
+The generated configuration is read by both the bundled MCP server and
+projection commands. Do not put credentials or write-capable Manager settings
+in it or in the Plugin manifest.
 
 For an explicitly configured ZIP artifact, embed that generated file with:
 
 ```sh
 poetry run python scripts/build_plugin.py \
-  --runtime-config "$PLUGIN_ROOT/plugins/context-library/runtime-config.json"
+  --runtime-config "$MARKETPLACE_ROOT/plugins/context-library/runtime-config.json"
 ```
 
 Normal public `make plugin-build` artifacts exclude runtime configuration.
@@ -124,18 +148,8 @@ consumer's committed `.context-library/config.json`, or set
 `CONTEXT_LIBRARY_PROJECT` for a deliberate session override. An explicit
 context policy is required before projection writes are allowed.
 
-## Register the marketplace and install
-
-Register the sparse monorepo checkout as a local marketplace, then install the
-Plugin entry declared by `.agents/plugins/marketplace.json`:
-
-```sh
-codex plugin marketplace add "$PLUGIN_ROOT"
-codex plugin add "context-library@${MARKETPLACE_NAME}"
-```
-
 Codex installs and enables the Plugin from either the `/plugin` menu or the
-command above. Plugin command hooks require a separate trust decision: open
+installer above. Plugin command hooks require a separate trust decision: open
 `/hooks`, review and trust the Context Library hook, and then start a new Codex
 thread. A newly installed `SessionStart` hook cannot run retroactively in the
 installation thread. Until it is trusted, Codex intentionally skips automatic
@@ -150,7 +164,7 @@ From a consumer workspace with the Plugin runtime configuration present (or
 `CONTEXT_LIBRARY_ROOT` set as an override):
 
 ```sh
-python3 "$PLUGIN_ROOT/plugins/context-library/projection.py" check \
+python3 "$MARKETPLACE_ROOT/plugins/context-library/projection.py" check \
   --root "$PWD"
 ```
 
@@ -158,9 +172,9 @@ If the consumer has an explicit required or optional context policy and the
 projection is missing or stale, run:
 
 ```sh
-python3 "$PLUGIN_ROOT/plugins/context-library/projection.py" sync \
+python3 "$MARKETPLACE_ROOT/plugins/context-library/projection.py" sync \
   --root "$PWD"
-python3 "$PLUGIN_ROOT/plugins/context-library/projection.py" check \
+python3 "$MARKETPLACE_ROOT/plugins/context-library/projection.py" check \
   --root "$PWD"
 ```
 
@@ -171,22 +185,24 @@ files.
 
 ## Upgrade and rollback
 
-Upgrade by selecting a newer tag in the same sparse checkout, reinstalling the
-marketplace entry, and starting a new Codex thread:
+Upgrade by selecting a newer tag in the same sparse source checkout, installing
+to a new release-specific destination, and starting a new Codex thread:
 
 ```sh
 RELEASE=v<new-version>
-git -C "$PLUGIN_ROOT" fetch --depth 1 origin tag "$RELEASE"
-git -C "$PLUGIN_ROOT" checkout --detach "$RELEASE"
-codex plugin marketplace add "$PLUGIN_ROOT"
-codex plugin add context-library@context-library
+git -C "$SOURCE_ROOT" fetch --depth 1 origin tag "$RELEASE"
+git -C "$SOURCE_ROOT" checkout --detach "$RELEASE"
+MARKETPLACE_ROOT="/opt/context-library-plugin-${RELEASE}"
+python3 "$SOURCE_ROOT/scripts/install_plugin.py" \
+  --destination "$MARKETPLACE_ROOT" \
+  --library-root "$CANONICAL_LIBRARY_ROOT"
 ```
 
-If validation fails, roll back to the previously approved tag and reinstall:
+If validation fails, register and reinstall the previously staged marketplace:
 
 ```sh
-git -C "$PLUGIN_ROOT" checkout --detach v<previous-version>
-codex plugin marketplace add "$PLUGIN_ROOT"
+MARKETPLACE_ROOT=/opt/context-library-plugin-v<previous-version>
+codex plugin marketplace add "$MARKETPLACE_ROOT"
 codex plugin add context-library@context-library
 ```
 
