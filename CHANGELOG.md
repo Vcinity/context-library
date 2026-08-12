@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add an evidence-backed roadmap for multi-project management, shared-context
+  inheritance, review-authorized publication, and production autonomy
+  evidence.
+
 ## 0.3.4 - 2026-08-08
 
 - Add deployment-time Plugin runtime configuration shared by the MCP server
