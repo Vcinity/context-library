@@ -54,7 +54,8 @@ context produces an advisory notice; optional and undetermined context do not
 interfere; disabled context is silent. Canonical additions and corrections go
 through the Manager.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md),
+See [ARCHITECTURE.md](ARCHITECTURE.md), the
+[Context Library Roadmap](https://github.com/orgs/Vcinity/projects/1),
 [MIGRATION.md](MIGRATION.md), and
 [docs/MAINTAINER_ADMINISTRATION.md](docs/MAINTAINER_ADMINISTRATION.md).
 

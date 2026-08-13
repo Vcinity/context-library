@@ -1022,6 +1022,89 @@ Negative variants MUST prove that:
 - incomplete telemetry prevents a target-achieved claim; and
 - the rolling metric is reproducible from persisted events.
 
+### 16.6 Agent-context retrieval benchmarks
+
+Development of task-specific Context Library retrieval MUST begin with a
+reproducible benchmark rather than an unmeasured retrieval implementation.
+The primary optimization target is agent-visible input tokens. Local
+filesystem reads, parsing work, and deterministic indexing are secondary
+diagnostics and MAY increase when that reduces agent tokens or agent-directed
+tool calls.
+
+The benchmark corpus MUST contain three separately reported layers:
+
+1. a small sanitized starter corpus representing realistic project decisions;
+1. adversarial synthetic cases covering distractors, lexical mismatch,
+   supersession, conflicts, global and scoped decisions, unresolved
+   applicability, insufficient token budgets, and tasks with no applicable
+   context; and
+1. deterministically generated scale variants with known relevance labels at
+   increasing decision counts, including at least 10, 100, 1,000, and 10,000
+   records.
+
+The separately governed canonical library MAY be evaluated read-only as a
+private development corpus, but its records, task descriptions, labels, and
+results MUST NOT be committed to this public monorepo unless they are
+explicitly sanitized and authorized. Canonical records MUST NOT be duplicated
+merely to construct the public benchmark.
+
+Each benchmark task MUST declare:
+
+- a stable task identifier and natural-language task summary;
+- the operation and repository paths or scopes known to the caller;
+- the operative current explicit decisions expected in the result;
+- relevant decisions whose applicability requires judgment;
+- excluded, superseded, or non-authoritative decisions that MUST NOT be
+  promoted to operative guidance;
+- applicable unresolved conflicts; and
+- whether complete coverage can be claimed from the supplied task signal.
+
+At minimum, the benchmark MUST compare full-register context, the current
+Plugin substring search, a simple lexical retrieval baseline, and each
+proposed task-context mechanism. More complex retrieval or reranking MUST be
+compared under the same corpus, task, agent-token budget, and result contract
+as the simpler baselines.
+
+Reports MUST distinguish:
+
+- recall of deterministically operative decisions;
+- inclusion of superseded, non-authoritative, conflicting, or inapplicable
+  guidance;
+- missed or hidden conflicts;
+- false complete-coverage claims;
+- agent-visible tokens, including repeated content across tool calls;
+- agent-directed tool-call count;
+- task correctness and adherence when an agent evaluation is run; and
+- local latency, filesystem reads, and index size as secondary diagnostics.
+
+Agent-visible token measurement MUST use the exact serialized content exposed
+to the agent and MUST name the tokenizer or model accounting method. Reports
+from different tokenizers MUST remain separate. Deterministic benchmark and
+gold-label validation MUST run offline; optional provider-backed agent
+evaluations MUST be labeled separately and MUST NOT replace the offline safety
+metrics.
+
+Before retrieval implementation results are examined, the benchmark milestone
+MUST record its token-reduction and tool-call acceptance targets. Regardless
+of those efficiency targets, an acceptable retrieval mechanism MUST:
+
+- recall every deterministically applicable current explicit directive in the
+  gold corpus;
+- never promote superseded or non-authoritative context to an operative
+  directive;
+- never hide an applicable unresolved conflict;
+- never claim complete coverage when the task signal, applicability state, or
+  token budget prevents that claim; and
+- report truncation explicitly rather than silently dropping an operative
+  directive.
+
+Critical retrieval cases MUST include a sanity mutation proving that omitted
+operative guidance, accepted superseded guidance, or a false completeness
+claim causes the benchmark to fail. The initial benchmark MUST be established
+before the versioned applicability metadata and task-context retrieval
+contracts are finalized; those contracts MUST be justified against benchmark
+cases rather than added speculatively.
+
 ## 17. Build and Developer Interface
 
 Python dependencies MUST be managed with Poetry. Frontend dependencies MUST be

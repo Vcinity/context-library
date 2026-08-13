@@ -13,6 +13,28 @@
   monorepo at present. Do not infer one from the presence of the Plugin or the
   availability of a shared library.
 
+## Roadmap and ticket execution
+
+- The public [Context Library Roadmap](https://github.com/orgs/Vcinity/projects/1)
+  is authoritative for planned work and sequencing. GitHub issues are the
+  units of implementation scope; `SPEC.md` remains authoritative for product
+  behavior and acceptance rules.
+- Before starting a roadmap issue, read its dependencies and do not implement
+  a blocked downstream contract unless the issue or user explicitly changes
+  the sequence.
+- Treat an issue's goal, acceptance criteria, implementation orientation, and
+  named specification sections as one bounded work package. Inspect the named
+  source and test patterns before adding new structure.
+- Spec-driven planning tools such as GitHub Spec Kit MAY refine an issue into
+  a plan and task list. Generated artifacts MUST link the originating issue,
+  remain within its scope, and MUST NOT override or silently broaden
+  `SPEC.md`, these instructions, or an upstream contract.
+- If implementation reveals that accepted behavior or a shared contract must
+  change, update `SPEC.md` first. If the change materially expands or
+  contradicts the issue, stop and obtain confirmation before implementing it.
+- Close an issue only with the validation evidence requested by that issue and
+  the applicable root checks. Record intentionally omitted checks and why.
+
 ## Context Manager suite isolation
 
 - When working specifically on the Context Manager suite—including
