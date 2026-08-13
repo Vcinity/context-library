@@ -938,6 +938,19 @@ unless an explicit integration environment is authorized.
 - Browser-driven primary workflow tests.
 - Failure-injection and adversarial tests.
 
+Black-box, behavior-first tests through stable consumer boundaries MUST be the
+default. These boundaries include CLI commands, MCP protocol messages, HTTP
+requests, generated artifacts, files, reports, logs, and process exit status.
+White-box unit tests MAY supplement this evidence for deterministic edge cases
+or diagnosis, but MUST NOT replace a practical black-box test when a stable
+boundary exists.
+
+End-to-end testing is a principal product goal and MUST be developed alongside
+each workflow rather than deferred until final integration. Each feature
+specification MUST identify the end-to-end slice it creates or extends, the
+realistic local fakes used at external boundaries, and the observable success
+and failure behavior asserted by that slice.
+
 ### 16.2 Required integration scenarios
 
 The suite MUST prove:
@@ -1104,6 +1117,25 @@ claim causes the benchmark to fail. The initial benchmark MUST be established
 before the versioned applicability metadata and task-context retrieval
 contracts are finalized; those contracts MUST be justified against benchmark
 cases rather than added speculatively.
+
+Retrieval-roadmap testing MUST principally exercise stable boundaries and
+incrementally establish these end-to-end flows:
+
+1. an authored or generated benchmark corpus and task enters the public
+   benchmark command, executes a selected baseline, emits a versioned report,
+   and returns a non-zero status for a violated safety invariant;
+1. shared applicability fixtures produce identical observable classifications
+   through Core-backed Maintainer query, Manager read, and generated Plugin
+   behavior; and
+1. an explicit project-bound task request enters the packaged read-only Plugin
+   MCP process and returns the compact rendered capsule, truthful coverage and
+   truncation state, and an on-demand full audit record without canonical
+   writes.
+
+Focused unit tests MAY support parser, evaluator, ranking, budgeting, and
+failure-classification coverage, but unit-only validation is insufficient for
+these flows. All committed end-to-end cases MUST run offline against synthetic
+repositories or temporary copies and realistic local fakes.
 
 ## 17. Build and Developer Interface
 
