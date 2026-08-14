@@ -33,6 +33,15 @@ def library_fixture(tmp_path: Path) -> Path:
         "### Read-only Plugin\n\n"
         "- Decision: Keep Plugin access read-only.\n"
         "- Provenance: explicit\n"
+        "- Rationale: Canonical writes belong to the Manager.\n"
+        "- Evidence: observation-read-only\n"
+        "- Affected Layers: plugins/context-library\n"
+        "\n"
+        '<a id="conditional"></a>\n'
+        "### Conditional decision\n\n"
+        "- Decision: Review the deployment tier.\n"
+        "- Provenance: explicit\n"
+        "- Applies-When: deployment tier is known\n"
     )
     (pack / "index-by-category.md").write_text("# Category\n")
     (pack / "index-by-date.md").write_text("# Date\n")
@@ -49,6 +58,20 @@ def test_every_advertised_mcp_tool_is_non_mutating(tmp_path, monkeypatch):
         "list_project_packs": {},
         "read_project_artifact": {"project": "demo", "artifact": "decision-register"},
         "search_decisions": {"project": "demo", "query": "read-only"},
+        "get_task_context": {
+            "project": "demo",
+            "task_summary": "Update the Plugin boundary",
+            "operation": "modify source",
+            "repository_scopes": ["plugins/context-library"],
+            "agent_token_budget": 1000,
+            "tokenizer": {
+                "name": "other",
+                "version": "1",
+                "vocabulary_revision": "other",
+                "accounting_method": "offline",
+            },
+        },
+        "read_decision_audit": {"project": "demo", "decision_ids": ["read-only"]},
     }
     assert set(server.TOOLS) == set(invocations)
     for name, arguments in invocations.items():
@@ -148,3 +171,103 @@ def test_mcp_sole_legacy_flat_pack_accepts_an_explicit_historical_alias(tmp_path
     result = server.read_project_artifact({"project": "previous-project", "artifact": "decision-register"})
     assert result["project"] == "previous-project"
     assert "Preserve compatible reads." in result["text"]
+
+
+def test_task_context_and_audit_are_black_box_contract_boundaries(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    task = server.get_task_context(
+        {
+            "project": "demo",
+            "task_summary": "Update the Plugin boundary",
+            "operation": "modify source",
+            "repository_scopes": ["plugins/context-library"],
+            "agent_token_budget": 1000,
+            "tokenizer": {
+                "name": "other",
+                "version": "1",
+                "vocabulary_revision": "other",
+                "accounting_method": "offline",
+            },
+        }
+    )
+    assert task["schema"] == "context-library/task-context-response"
+    assert [item["decision_id"] for item in task["operative_directives"]] == ["read-only"]
+    assert "Canonical writes belong to the Manager." not in task["agent_visible_capsule"]["serialized_content"]
+    assert task["agent_visible_capsule"]["utf8_byte_count"] == len(
+        task["agent_visible_capsule"]["serialized_content"].encode()
+    )
+
+    audit = server.read_decision_audit({"project": "demo", "decision_ids": ["read-only"]})
+    assert audit["schema"] == "context-library/decision-audit-response"
+    record = audit["records"][0]
+    assert record["rationale"] == "Canonical writes belong to the Manager."
+    assert record["evidence"] == ["observation-read-only"]
+    assert record["source_scope"] == "projects/demo"
+    assert record["applicability"]["state"] == "undetermined"
+
+
+@pytest.mark.parametrize(
+    "tool,args,match",
+    [
+        ("get_task_context", {"task_summary": "x"}, "explicitly selected"),
+        (
+            "get_task_context",
+            {
+                "project": "demo",
+                "task_summary": "x",
+                "operation": "x",
+                "repository_scopes": ["plugins/context-library"],
+                "agent_token_budget": 10,
+                "tokenizer": {
+                    "name": "other",
+                    "version": "1",
+                    "vocabulary_revision": "other",
+                    "accounting_method": "offline",
+                },
+                "schema_version": 2,
+            },
+            "unsupported task-context schema version",
+        ),
+        ("read_decision_audit", {"project": "demo", "decision_ids": ["missing"]}, "unknown decision ID"),
+        ("read_decision_audit", {"project": "../../outside", "decision_ids": ["x"]}, "escapes"),
+    ],
+)
+def test_new_tools_fail_closed(tmp_path, monkeypatch, tool, args, match):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    with pytest.raises(server.McpError, match=match):
+        server.TOOLS[tool]["handler"](args)
+
+
+def test_generated_task_context_matches_core_renderer(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    register, revision, source_scope = server.read_register("demo")
+    payload = {
+        "project": "demo",
+        "task_summary": "Update the Plugin boundary",
+        "operation": "modify source",
+        "repository_scopes": ["plugins/context-library"],
+        "agent_token_budget": 1000,
+        "tokenizer": {
+            "name": "other",
+            "version": "1",
+            "vocabulary_revision": "other",
+            "accounting_method": "offline",
+        },
+    }
+    generated = server.resolve_task_context(payload, register, revision=revision, source_scope=source_scope)
+    from context_library_core.task_context import TaskContextRequest
+    from context_library_core.task_context_resolution import resolve_task_context
+
+    core = resolve_task_context(
+        register,
+        TaskContextRequest.model_validate(payload),
+        revision=revision,
+        source_scope=source_scope,
+    ).model_dump(mode="json", by_alias=True)
+    assert generated == core

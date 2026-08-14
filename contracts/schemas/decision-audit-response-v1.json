@@ -1,0 +1,287 @@
+{
+  "$defs": {
+    "ApplicabilityState": {
+      "enum": [
+        "unconditional",
+        "satisfied",
+        "unsatisfied",
+        "undetermined"
+      ],
+      "title": "ApplicabilityState",
+      "type": "string"
+    },
+    "DecisionAuditApplicability": {
+      "additionalProperties": false,
+      "properties": {
+        "matched_selectors": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Matched Selectors",
+          "type": "object"
+        },
+        "reason": {
+          "enum": [
+            "none",
+            "scope-mismatch",
+            "missing-task-signal",
+            "conditional-unresolved"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "required_selectors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Selectors",
+          "type": "array"
+        },
+        "state": {
+          "$ref": "#/$defs/ApplicabilityState"
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "title": "DecisionAuditApplicability",
+      "type": "object"
+    },
+    "DecisionAuditRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_layers": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Affected Layers",
+          "type": "array"
+        },
+        "applicability": {
+          "$ref": "#/$defs/DecisionAuditApplicability"
+        },
+        "applies_when": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applies When"
+        },
+        "category": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Category",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Conflict Ids",
+          "type": "array"
+        },
+        "conflict_key": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conflict Key"
+        },
+        "constraints": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Constraints",
+          "type": "array"
+        },
+        "decision": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Decision",
+          "type": "string"
+        },
+        "decision_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "derivation": {
+          "enum": [
+            "direct",
+            "condensed",
+            "synthesized"
+          ],
+          "title": "Derivation",
+          "type": "string"
+        },
+        "effective_provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Effective Provenance",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rationale"
+        },
+        "review": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Review"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "source_scope": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Source Scope",
+          "type": "string"
+        },
+        "subject": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "supersedes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Supersedes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "decision_id",
+        "subject",
+        "category",
+        "decision",
+        "provenance",
+        "effective_provenance",
+        "derivation",
+        "source_scope",
+        "applicability"
+      ],
+      "title": "DecisionAuditRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "records": {
+      "items": {
+        "$ref": "#/$defs/DecisionAuditRecord"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Records",
+      "type": "array"
+    },
+    "revision": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Revision",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/decision-audit-response",
+      "default": "context-library/decision-audit-response",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "project",
+    "revision",
+    "records"
+  ],
+  "title": "DecisionAuditResponse",
+  "type": "object"
+}
