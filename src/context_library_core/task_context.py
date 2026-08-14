@@ -134,7 +134,9 @@ def render_task_context(
         operative_directives=operative,
         applicability_uncertainties=uncertainties,
         non_operative_directives=non_operative,
-        applicable_conflicts=sorted({conflict for item in operative + uncertainties for conflict in item.conflict_ids}),
+        applicable_conflicts=sorted(
+            {conflict for item in operative + uncertainties + non_operative for conflict in item.conflict_ids}
+        ),
         coverage=TaskContextCoverage(
             operative_expected=len(operative),
             operative_included=len(operative) - len(omitted),
