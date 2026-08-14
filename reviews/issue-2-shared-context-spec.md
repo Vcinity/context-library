@@ -20,7 +20,8 @@ read-only and the Maintainer writes only the owning pack.
 
 ## Applicable authority and proposed contract
 
-Add a versioned `context-library/shared-context-relationships` artifact with:
+Add a versioned `context-library/shared-context-relationships` artifact in
+`projects/<project>/shared-context-relationships.yaml` with:
 
 ```json
 {
@@ -36,8 +37,15 @@ Add a versioned `context-library/shared-context-relationships` artifact with:
 
 Relationships are explicit configuration, not discovery. Parent identifiers
 are unique, normalized project IDs; order is deterministic and cannot grant
-authority. A missing required parent, cycle, duplicate edge, or ambiguous
-relationship fails closed. Legacy packs with no artifact remain standalone.
+authority. A parent MUST explicitly authorize the child in its
+`authority.yaml` `shared_context_consumers` allow-list; absent authorization,
+the relationship fails closed. Relationships are transitive: a child sees
+grandparent records after recursively resolving parents. Effective traversal
+is depth-first in ascending edge order, with project ID as the stable tie
+breaker; duplicate identities are rejected unless source and content are
+byte-equivalent. A missing required parent, cycle, duplicate edge, or
+ambiguous relationship fails closed. Legacy packs with no artifact remain
+standalone.
 
 The resolver returns a read-only effective view. Each decision carries its
 owning project, source pack identity/digest, provenance, derivation,
@@ -58,6 +66,10 @@ reported rather than silently chosen.
 - generated Plugin runtime and read-only MCP/projection behavior; and
 - shared synthetic fixtures and cross-component black-box tests.
 
+The contract is anchored in SPEC.md §9.2 and §14: the named file is part of
+the target project-pack layout, and parent authorization is required to avoid
+cross-project evidence access and provenance laundering.
+
 No canonical data is committed. Tests use temporary synthetic pack trees.
 
 ## End-to-end validation
@@ -66,7 +78,8 @@ The principal slice is:
 
 ```text
 explicit relationship fixture -> Core effective view -> Maintainer query
-  -> Manager read/audit -> generated Plugin read/projection
+  -> Manager read/search/proposal/review/audit -> generated Plugin
+  read/projection
 ```
 
 Positive cases cover one parent, multiple ordered parents, and standalone
@@ -83,7 +96,11 @@ The artifact is additive and versioned; unsupported versions fail closed.
 Existing project configuration remains valid without relationships. Effective
 views must not be cached across relationship or source-digest revisions.
 Provider-backed evaluation is out of scope. The downstream retrieval roadmap
-must consume this contract rather than inventing cross-scope precedence.
+must consume this contract rather than inventing cross-scope precedence. Open
+risks to validate during implementation are resolver cost for deep graphs and
+consistency when a parent revision changes during a read; the implementation
+must bind one source-digest snapshot per effective-view request and report
+bounded-resource failures explicitly.
 
 Before implementation, independent review must confirm graph semantics,
 authority/provenance preservation, cross-component parity, public-data

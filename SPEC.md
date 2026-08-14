@@ -391,8 +391,20 @@ projects/<project>/
 ├── index-by-date.md
 ├── maintainer.yaml
 ├── topology.yaml
-└── authority.yaml
+├── authority.yaml
+└── shared-context-relationships.yaml
 ```
+
+`shared-context-relationships.yaml` is optional. When present, it declares
+explicit parent project packs for a read-only effective view. Relationships
+are transitive and resolved depth-first by ascending edge order, with project
+ID as the stable tie-breaker. A parent pack MUST authorize each child through
+its `authority.yaml` `shared_context_consumers` allow-list; missing
+authorization, missing required parents, cycles, duplicate edges, ambiguous
+graphs, or unsupported versions MUST fail closed. Filesystem adjacency MUST
+not create inheritance. Effective views MUST preserve source ownership,
+provenance, source digests, and conflict visibility and MUST bind one
+consistent source-digest snapshot per request.
 
 Pack discovery MUST NOT return the same logical project twice. Legacy
 selection MUST be represented as a compatibility location for one logical
