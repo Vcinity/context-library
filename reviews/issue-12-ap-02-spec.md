@@ -36,9 +36,9 @@ decision applicability declaration:
     "effective_provenance": "explicit",
     "source_scope": "project/example",
     "supersedes": [],
-    "conflict_ids": []
-  },
-  "applies_when": null
+    "conflict_ids": [],
+    "applies_when": null
+  }
 }
 ```
 
@@ -47,9 +47,11 @@ machine-readable reason, and the unchanged decision identity/authority fields.
 Selectors are exact normalized relative paths or declared project scopes;
 absolute paths, traversal, empty values, duplicates, unknown selector keys,
 and ambiguous mappings fail validation. A decision with no selector and no
-conditional expression is `unconditional`. A scoped decision is `satisfied`
-when task scopes intersect according to the explicit normalized scope rule,
-`unsatisfied` on a known non-match, and `undetermined` when the required task
+conditional expression is `unconditional`. In version 1, a scoped decision is
+`satisfied` only when at least one normalized task scope is an exact member of
+the decision's `repository_scopes` list; ancestor/descendant prefix matching
+and implicit filesystem containment are deliberately not used. It is
+`unsatisfied` on a known non-match and `undetermined` when the required task
 signal is absent. `undetermined` is never returned in an operative set.
 
 ## Affected components and compatibility
@@ -84,10 +86,10 @@ task-context retrieval or provider evaluation is introduced.
 
 ## Risks and unresolved questions
 
-Scope intersection must remain conservative and documented so a parent path
-does not accidentally authorize an unrelated sibling. The evaluator will use
-the existing canonical path normalization rules and reject mappings it cannot
-prove safe. Future selector additions require a new benchmark-backed review
+Exact membership is intentionally conservative so a parent path does not
+accidentally authorize an unrelated sibling. The evaluator will normalize
+relative scope strings using the contract's explicit separator/traversal
+checks and reject mappings it cannot prove safe. Future selector additions require a new benchmark-backed review
 and contract revision rather than widening version 1 silently.
 
 This immutable checkpoint requires fresh independent read-only review before
