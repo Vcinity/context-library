@@ -17,6 +17,12 @@ def _safe_payload(value: Any) -> Any:
     return sanitize_value(value)
 
 
+class ProjectLifecycleConflict(RuntimeError):
+    def __init__(self, current: dict[str, object]):
+        super().__init__("project lifecycle version conflict")
+        self.current = current
+
+
 class LockedSQLiteCursor:
     def __init__(self, cursor: sqlite3.Cursor, lock: threading.RLock):
         self._cursor = cursor
@@ -522,6 +528,67 @@ class Store:
         return self.db.execute(
             "SELECT state,version,reason,actor,updated_at FROM agent_service_state WHERE singleton=1"
         ).fetchone()
+
+    def project_lifecycle(self, project: str):
+        return self.db.execute(
+            "SELECT id,active,lifecycle,lifecycle_version,updated_at FROM projects WHERE id=?",
+            (project,),
+        ).fetchone()
+
+    def transition_project_lifecycle(
+        self,
+        project: str,
+        lifecycle: str,
+        expected_version: int,
+        actor: str,
+        reason: str,
+    ) -> dict[str, object]:
+        allowed = {
+            "enabled": {"paused", "draining", "error"},
+            "paused": {"enabled", "draining", "error"},
+            "draining": {"disabled", "error"},
+            "disabled": {"enabled"},
+            "error": {"paused", "draining"},
+        }
+        if lifecycle not in allowed:
+            raise ValueError(f"invalid project lifecycle: {lifecycle}")
+        row = self.project_lifecycle(project)
+        if not row:
+            raise KeyError(project)
+        if row["lifecycle_version"] != expected_version:
+            raise ProjectLifecycleConflict(dict(row))
+        if lifecycle != row["lifecycle"] and lifecycle not in allowed[row["lifecycle"]]:
+            raise ValueError(f"invalid project lifecycle transition {row['lifecycle']} -> {lifecycle}")
+        next_version = expected_version if lifecycle == row["lifecycle"] else expected_version + 1
+        self.db.execute(
+            "UPDATE projects SET lifecycle=?,lifecycle_version=?,active=?,updated_at=? "
+            "WHERE id=? AND lifecycle_version=?",
+            (
+                lifecycle,
+                next_version,
+                int(lifecycle != "disabled"),
+                utc_now(),
+                project,
+                expected_version,
+            ),
+        )
+        if lifecycle != row["lifecycle"]:
+            self.event(
+                None,
+                actor,
+                "project-lifecycle-transition",
+                {
+                    "from": row["lifecycle"],
+                    "to": lifecycle,
+                    "reason": reason,
+                    "expected_version": expected_version,
+                    "version": next_version,
+                },
+                project,
+            )
+        self.db.commit()
+        current = self.project_lifecycle(project)
+        return dict(current)
 
     def start_agent_run(
         self,

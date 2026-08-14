@@ -10,15 +10,19 @@ from datetime import datetime, timedelta, timezone
 from .security import safe_error_class
 
 
-def enqueue_reminders(store, reminder_days: int = 7) -> int:
+def enqueue_reminders(store, reminder_days: int = 7, project: str | None = None) -> int:
     """Re-open the single outbox record for an overdue open-review reminder."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=reminder_days)).isoformat().replace("+00:00", "Z")
-    rows = store.db.execute(
+    query = (
         "SELECT n.id,r.project,r.work_id FROM notifications n JOIN reviews r ON r.id=n.review_id "
         "WHERE r.status='open' AND n.status='delivered' AND "
-        "COALESCE(n.delivered_at,n.created_at) <= ?",
-        (cutoff,),
-    ).fetchall()
+        "COALESCE(n.delivered_at,n.created_at) <= ?"
+    )
+    parameters: tuple[object, ...] = (cutoff,)
+    if project is not None:
+        query += " AND r.project=?"
+        parameters += (project,)
+    rows = store.db.execute(query, parameters).fetchall()
     for row in rows:
         store.db.execute(
             "UPDATE notifications SET status='pending', attempts=0, next_attempt=NULL, "
@@ -48,18 +52,23 @@ def deliver_pending(
     *,
     owner: str | None = None,
     claim_seconds: int = 60,
+    project: str | None = None,
 ) -> dict[str, int]:
     owner = owner or f"notification:{uuid.uuid4().hex}"
     claim_seconds = max(claim_seconds, 15)
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    rows = store.db.execute(
+    query = (
         "SELECT n.*,r.project,r.work_id FROM notifications n "
         "JOIN reviews r ON r.id=n.review_id WHERE n.status='pending' "
         "AND (n.next_attempt IS NULL OR n.next_attempt <= ?) "
-        "AND (n.claim_owner IS NULL OR n.claim_expires <= ?) "
-        "ORDER BY n.created_at LIMIT 100",
-        (now, now),
-    ).fetchall()
+        "AND (n.claim_owner IS NULL OR n.claim_expires <= ?)"
+    )
+    parameters: tuple[object, ...] = (now, now)
+    if project is not None:
+        query += " AND r.project=?"
+        parameters += (project,)
+    query += " ORDER BY n.created_at LIMIT 100"
+    rows = store.db.execute(query, parameters).fetchall()
     delivered = 0
     failed = 0
     for row in rows:
