@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from context_library_core.contracts import (
     AgentProviderRequest,
     AgentProviderResponse,
+    ApplicabilityRequest,
+    ApplicabilityResult,
     CapabilityEnvelope,
     CommandEnvelope,
     ContextPolicy,
@@ -38,6 +40,8 @@ OUTPUT = ROOT / "contracts/schemas"
 MODELS: dict[str, Type[BaseModel]] = {
     "agent-provider-request-v1": AgentProviderRequest,
     "agent-provider-response-v1": AgentProviderResponse,
+    "applicability-v1": ApplicabilityRequest,
+    "applicability-result-v1": ApplicabilityResult,
     "candidate-v1": Candidate,
     "capabilities-v1": CapabilityEnvelope,
     "context-policy-v1": ContextPolicy,

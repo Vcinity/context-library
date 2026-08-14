@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "ApplicabilityState": {
+      "enum": [
+        "unconditional",
+        "satisfied",
+        "unsatisfied",
+        "undetermined"
+      ],
+      "title": "ApplicabilityState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "conflict_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Conflict Ids",
+      "type": "array"
+    },
+    "decision_id": {
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "effective_provenance": {
+      "enum": [
+        "explicit",
+        "inferred",
+        "assumed"
+      ],
+      "title": "Effective Provenance",
+      "type": "string"
+    },
+    "matched_selectors": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Matched Selectors",
+      "type": "object"
+    },
+    "provenance": {
+      "enum": [
+        "explicit",
+        "inferred",
+        "assumed"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "none",
+        "scope-mismatch",
+        "missing-task-signal",
+        "conditional-unresolved"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "required_selectors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Required Selectors",
+      "type": "array"
+    },
+    "schema": {
+      "const": "context-library/applicability-result",
+      "default": "context-library/applicability-result",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_scope": {
+      "title": "Source Scope",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/ApplicabilityState"
+    },
+    "supersedes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supersedes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "decision_id",
+    "state",
+    "reason",
+    "provenance",
+    "effective_provenance",
+    "source_scope"
+  ],
+  "title": "ApplicabilityResult",
+  "type": "object"
+}
