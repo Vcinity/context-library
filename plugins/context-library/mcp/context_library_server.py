@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -11,7 +12,14 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
-from generated.core_runtime import PRODUCT_VERSION, discover_packs, parse_register, resolve_pack  # noqa: E402
+from generated.core_runtime import (  # noqa: E402
+    PRODUCT_VERSION,
+    build_decision_audit,
+    discover_packs,
+    parse_register,
+    resolve_pack,
+    resolve_task_context,
+)
 from runtime_config import RuntimeConfigError, setting  # noqa: E402
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -55,6 +63,24 @@ def read_text(path: Path) -> str:
         raise McpError(f"missing file: {path}") from exc
     except OSError as exc:
         raise McpError(f"unable to read {path}: {exc}") from exc
+
+
+def read_register(project: str) -> tuple[str, str, str]:
+    root = library_root()
+    pack = project_pack_path(root, project)
+    path = safe_child(pack, "decision-register.md")
+    try:
+        raw = path.read_bytes()
+        text = raw.decode("utf-8")
+    except FileNotFoundError as exc:
+        raise McpError(f"missing decision register for project {project!r}") from exc
+    except UnicodeDecodeError as exc:
+        raise McpError(f"decision register for project {project!r} is not valid UTF-8") from exc
+    except OSError as exc:
+        raise McpError(f"unable to read decision register for project {project!r}: {exc}") from exc
+    revision = f"sha256:{hashlib.sha256(raw).hexdigest()}"
+    source_scope = path.parent.relative_to(root).as_posix()
+    return text, revision, source_scope
 
 
 def safe_child(root: Path, *parts: str) -> Path:
@@ -179,6 +205,50 @@ def search_decisions(args: dict[str, Any] | None = None) -> dict[str, Any]:
     }
 
 
+def get_task_context(args: dict[str, Any] | None = None) -> dict[str, Any]:
+    args = dict(args or {})
+    project = str(args.get("project", "")).strip()
+    if not project:
+        raise McpError("project must be explicitly selected")
+    request_project = args.get("project")
+    if request_project != project:
+        raise McpError("project must be a stable lowercase identifier")
+    register, revision, source_scope = read_register(project)
+    try:
+        return resolve_task_context(args, register, revision=revision, source_scope=source_scope)
+    except (ValueError, KeyError) as exc:
+        raise McpError(str(exc)) from exc
+
+
+def read_decision_audit(args: dict[str, Any] | None = None) -> dict[str, Any]:
+    args = args or {}
+    project = str(args.get("project", "")).strip()
+    if not project:
+        raise McpError("project must be explicitly selected")
+    schema = args.get("schema", "context-library/decision-audit-response")
+    if schema != "context-library/decision-audit-response":
+        raise McpError("unsupported decision-audit schema family")
+    if args.get("schema_version", 1) != 1:
+        raise McpError("unsupported decision-audit schema version")
+    if "include_related" in args and not isinstance(args["include_related"], bool):
+        raise McpError("include_related must be a boolean")
+    decision_ids = args.get("decision_ids")
+    if not isinstance(decision_ids, list):
+        raise McpError("decision_ids must be a list")
+    try:
+        register, revision, source_scope = read_register(project)
+        return build_decision_audit(
+            register,
+            project=project,
+            revision=revision,
+            source_scope=source_scope,
+            decision_ids=decision_ids,
+            include_related=bool(args.get("include_related", False)),
+        )
+    except (ValueError, KeyError) as exc:
+        raise McpError(str(exc)) from exc
+
+
 TOOLS: dict[str, dict[str, Any]] = {
     "get_library_status": {
         "description": "Report whether the configured shared context library root exists and is readable.",
@@ -229,6 +299,41 @@ TOOLS: dict[str, dict[str, Any]] = {
             "additionalProperties": False,
         },
         "handler": search_decisions,
+    },
+    "get_task_context": {
+        "description": "Resolve an explicitly project-bound task into the compact RT-01 context response.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "schema": {"type": "string", "const": "context-library/task-context-request", "default": "context-library/task-context-request"},
+                "schema_version": {"type": "integer", "const": 1, "default": 1},
+                "project": {"type": "string"},
+                "task_summary": {"type": "string"},
+                "operation": {"type": "string"},
+                "repository_scopes": {"type": "array", "items": {"type": "string"}},
+                "agent_token_budget": {"type": "integer", "minimum": 0},
+                "tokenizer": {"type": "object", "additionalProperties": False},
+            },
+            "required": ["project", "task_summary", "operation", "repository_scopes", "agent_token_budget", "tokenizer"],
+            "additionalProperties": False,
+        },
+        "handler": get_task_context,
+    },
+    "read_decision_audit": {
+        "description": "Read full canonical records for explicitly selected decision IDs without canonical writes.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "schema": {"type": "string", "const": "context-library/decision-audit-response", "default": "context-library/decision-audit-response"},
+                "schema_version": {"type": "integer", "const": 1, "default": 1},
+                "project": {"type": "string"},
+                "decision_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 100},
+                "include_related": {"type": "boolean", "default": False},
+            },
+            "required": ["project", "decision_ids"],
+            "additionalProperties": False,
+        },
+        "handler": read_decision_audit,
     },
 }
 

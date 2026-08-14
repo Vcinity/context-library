@@ -16,6 +16,7 @@ from context_library_core.contracts import (
     CommandEnvelope,
     ContextPolicy,
     ContextResolution,
+    DecisionAuditResponse,
     MissingContextNotice,
     VersionEnvelope,
 )
@@ -46,6 +47,7 @@ MODELS: dict[str, Type[BaseModel]] = {
     "candidate-v1": Candidate,
     "capabilities-v1": CapabilityEnvelope,
     "context-policy-v1": ContextPolicy,
+    "decision-audit-response-v1": DecisionAuditResponse,
     "context-resolution-v1": ContextResolution,
     "conflict-packet-v1": ConflictPacket,
     "conflict-resolution-v1": ConflictResolution,

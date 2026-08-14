@@ -16,6 +16,7 @@ SCHEMA_FAMILIES: dict[str, list[int]] = {
     "context-library/configuration-rollback": [1],
     "context-library/context-policy": [1],
     "context-library/context-resolution": [1],
+    "context-library/decision-audit-response": [1],
     "context-library/conflict-packet": [1],
     "context-library/conflict-resolution": [1],
     "context-library/finding": [1],
@@ -168,6 +169,46 @@ class ApplicabilityResult(Contract):
     source_scope: str
     supersedes: list[str] = Field(default_factory=list)
     conflict_ids: list[str] = Field(default_factory=list)
+
+
+class DecisionAuditApplicability(Contract):
+    state: ApplicabilityState
+    reason: Literal["none", "scope-mismatch", "missing-task-signal", "conditional-unresolved"]
+    matched_selectors: dict[str, list[str]] = Field(default_factory=dict)
+    required_selectors: list[str] = Field(default_factory=list)
+
+
+class DecisionAuditRecord(Contract):
+    decision_id: str = Field(min_length=1, max_length=256)
+    subject: str = Field(min_length=1, max_length=4000)
+    category: str = Field(min_length=1, max_length=512)
+    decision: str = Field(min_length=1, max_length=4000)
+    constraints: list[str] = Field(default_factory=list, max_length=1000)
+    rationale: str | None = Field(default=None, max_length=20_000)
+    evidence: list[str] = Field(default_factory=list, max_length=1000)
+    provenance: Literal["explicit", "inferred", "assumed"]
+    effective_provenance: Literal["explicit", "inferred", "assumed"]
+    derivation: Literal["direct", "condensed", "synthesized"]
+    source_ids: list[str] = Field(default_factory=list, max_length=1000)
+    source_scope: str = Field(min_length=1, max_length=512)
+    supersedes: list[str] = Field(default_factory=list, max_length=1000)
+    conflict_ids: list[str] = Field(default_factory=list, max_length=1000)
+    conflict_key: str | None = Field(default=None, max_length=512)
+    affected_layers: list[str] = Field(default_factory=list, max_length=1000)
+    applies_when: str | None = Field(default=None, max_length=2000)
+    confidence: str | None = Field(default=None, max_length=512)
+    review: str | None = Field(default=None, max_length=512)
+    applicability: DecisionAuditApplicability
+
+
+class DecisionAuditResponse(Contract):
+    schema_id: Literal["context-library/decision-audit-response"] = Field(
+        default="context-library/decision-audit-response", alias="schema"
+    )
+    schema_version: Literal[1] = 1
+    project: str
+    revision: str = Field(min_length=1, max_length=256)
+    records: list[DecisionAuditRecord] = Field(min_length=1, max_length=100)
 
 
 class VersionEnvelope(Contract):
