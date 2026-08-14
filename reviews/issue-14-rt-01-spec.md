@@ -35,8 +35,9 @@ Add versioned `context-library/task-context-request` and
 ```
 
 The response contains `project`, source `revision`, `operative_directives`,
-`applicability_uncertainties`, `applicable_conflicts`, a machine-readable
-`coverage` object, `truncation`, and a compact `agent_visible_capsule` with
+`applicability_uncertainties`, `non_operative_directives`,
+`applicable_conflicts`, a machine-readable `coverage` object, `truncation`,
+and a compact `agent_visible_capsule` with
 exact UTF-8 byte count, digest, and token count. Every item includes a stable
 decision ID; common revision, scope, and provenance metadata is rendered once
 in the header and referenced by ID rather than repeated per item.
@@ -52,8 +53,10 @@ the compact capsule is empty or over budget.
 
 The renderer consumes already-resolved AP-03 results. Only explicit
 `unconditional` or `satisfied` decisions enter `operative_directives`;
-`undetermined` decisions remain in `applicability_uncertainties`, and
-conflicts remain separate. Ordering is deterministic by state priority,
+`undetermined` decisions remain in `applicability_uncertainties`, explicit
+scope mismatches (`unsatisfied`) appear as ID/reason/authority references in
+`non_operative_directives`, and conflicts remain separate. Non-operative
+references never enter the agent-visible operative capsule. Ordering is deterministic by state priority,
 decision ID, and source scope. Rendering is read-only and does not infer
 authority from task-summary text or semantic similarity.
 
