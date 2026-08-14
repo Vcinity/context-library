@@ -63,7 +63,7 @@ def test_settings_reject_duplicate_or_unmanaged_default_projects(tmp_path):
 
 def test_versioned_registry_enrolls_only_explicit_projects(tmp_path, monkeypatch):
     library = tmp_path / "library"
-    for name in ("alpha", "beta", "discovered"):
+    for name in ("alpha", "beta", "gamma", "discovered"):
         (library / "projects" / name).mkdir(parents=True)
     config_file = tmp_path / "manager.yaml"
     config_file.write_text(
@@ -75,6 +75,10 @@ def test_versioned_registry_enrolls_only_explicit_projects(tmp_path, monkeypatch
         "  - id: beta\n"
         f"    library_root: {library / 'projects' / 'beta'}\n"
         "    state_namespace: beta\n"
+        "  - id: gamma\n"
+        f"    library_root: {library / 'projects' / 'gamma'}\n"
+        "    state_namespace: gamma\n"
+        "    enabled: false\n"
     )
     monkeypatch.setenv("CLM_LIBRARY_ROOT", str(library))
     monkeypatch.setenv("CLM_PROJECT", "alpha")
@@ -105,5 +109,8 @@ def test_versioned_registry_enrolls_only_explicit_projects(tmp_path, monkeypatch
     assert login.status_code == 200
     assert client.get("/api/v1/projects/beta/overview").status_code == 200
     assert client.get("/api/v1/projects/discovered/overview").status_code == 404
+    assert client.get("/api/v1/projects/gamma/overview").status_code == 404
     enrolled = app.state.store.db.execute("SELECT id FROM projects ORDER BY id").fetchall()
-    assert [row["id"] for row in enrolled] == ["alpha", "beta"]
+    assert [row["id"] for row in enrolled] == ["alpha", "beta", "gamma"]
+    gamma = app.state.store.db.execute("SELECT active FROM projects WHERE id='gamma'").fetchone()
+    assert gamma["active"] == 0

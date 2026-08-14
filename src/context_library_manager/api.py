@@ -112,12 +112,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return wrapped
 
     now = utc_now()
-    managed = [entry for entry in settings.managed_projects if entry.enabled]
+    managed = list(settings.managed_projects)
     for entry in managed:
         app.state.store.db.execute(
-            "INSERT INTO projects(id,name,created_at,updated_at) VALUES(?,?,?,?) "
-            "ON CONFLICT(id) DO UPDATE SET active=1,updated_at=excluded.updated_at",
-            (entry.id, entry.id, now, now),
+            "INSERT INTO projects(id,name,created_at,updated_at,active) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET active=excluded.active,updated_at=excluded.updated_at",
+            (entry.id, entry.id, now, now, int(entry.enabled)),
         )
         app.state.store.db.execute(
             "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
