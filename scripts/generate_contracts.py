@@ -34,6 +34,7 @@ from context_library_core.retrieval_contracts import (
     RetrievalBenchmarkReport,
     RetrievalBenchmarkTask,
 )
+from context_library_core.task_context import TaskContextRequest, TaskContextResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "contracts/schemas"
@@ -58,6 +59,8 @@ MODELS: dict[str, Type[BaseModel]] = {
     "retrieval-benchmark-gold-v1": RetrievalBenchmarkGold,
     "retrieval-benchmark-report-v1": RetrievalBenchmarkReport,
     "retrieval-benchmark-task-v1": RetrievalBenchmarkTask,
+    "task-context-request-v1": TaskContextRequest,
+    "task-context-response-v1": TaskContextResponse,
     "source-envelope-v1": SourceEnvelope,
     "version-v1": VersionEnvelope,
 }
