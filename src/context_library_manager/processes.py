@@ -18,16 +18,16 @@ def run_role(process: str, settings: Settings) -> dict:
         store = Store(settings.storage_target)
         registry = ProjectRuntimeRegistry(settings.managed_projects)
         scheduler = FairProjectScheduler(registry)
-        result = None
+        results = []
         for _ in registry.enabled():
             project = scheduler.next_project(registry.enabled())
             if project is None:
                 break
             result = Worker(store, settings.for_project(project)).run_once()
             if result is not None:
-                break
+                results.append(result)
         store.close()
-        return result or {"status": "idle"}
+        return {"status": "processed", "results": results} if results else {"status": "idle"}
     elif process == "scheduler":
         store = Store(settings.storage_target)
         recovered = 0
