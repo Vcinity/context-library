@@ -1,10 +1,11 @@
 # Generated from context_library_core.canonical; do not edit.
 # source-version: 0.3.4
-# source-sha256: 3a3a89a35cfc36d700081aaaaf673ed551176ccdee71b60ea9a9b5691cd9ec34
+# source-sha256: a1458155977818a055868c4e1fbe747f3d6cdaf03a812eca7301c75ec12bc9a0
 from __future__ import annotations
 
 import dataclasses
 import re
+from bisect import bisect_right
 from pathlib import Path
 from typing import Iterable
 
@@ -124,6 +125,8 @@ def parse_register(text: str) -> tuple[Decision, ...]:
         raise CanonicalParseError("decision-like content appears before the first decision anchor")
     decisions: list[Decision] = []
     seen: set[str] = set()
+    sections = list(re.finditer(r"^##\s+(.+?)\s*$", text, re.MULTILINE))
+    section_starts = [section.start() for section in sections]
     for index, anchor in enumerate(anchors):
         decision_id = anchor.group(1)
         if not ID_RE.fullmatch(decision_id):
@@ -176,8 +179,10 @@ def parse_register(text: str) -> tuple[Decision, ...]:
         evidence = _items(fields, "evidence")
         if evidence:
             metadata["evidence"] = evidence
-        sections = list(re.finditer(r"^##\s+(.+?)\s*$", text[: anchor.start()], re.MULTILINE))
-        category = _one(fields, "category") or (sections[-1].group(1).strip() if sections else "Uncategorized")
+        section_index = bisect_right(section_starts, anchor.start()) - 1
+        category = _one(fields, "category") or (
+            sections[section_index].group(1).strip() if section_index >= 0 else "Uncategorized"
+        )
         decisions.append(
             Decision(
                 decision_id=decision_id,
