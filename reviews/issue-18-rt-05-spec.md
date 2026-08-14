@@ -2,8 +2,8 @@
 
 Status: specification-only checkpoint  
 Originating issue: #18 — Validate operative-context retrieval against frozen acceptance targets  
-Dependencies: #6–#10 benchmark foundation, plus #16 and #17, merged in
-`9ddc856`
+Dependencies: #6–#10 benchmark foundation; #16 merged in `9ddc856`; and #17
+merged in `3622839`
 
 ## Scope and non-goals
 
