@@ -32,7 +32,8 @@ supersession, and conflict metadata. A parity harness submits the same
 
 The harness compares canonical JSON result fields, not private object identity.
 Every adapter must preserve `decision_id`, state, reason, matched selectors,
-required selectors, provenance, source scope, supersession, and conflict IDs.
+required selectors, declared `provenance`, `effective_provenance`, source
+scope, supersession, and conflict IDs.
 Any divergence fails the test and identifies the adapter and field.
 Extending the existing generated Plugin evaluator template to emit these
 already-defined AP-02 fields is explicitly in scope. This is completion of the
