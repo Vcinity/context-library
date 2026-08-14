@@ -2,7 +2,8 @@
 
 Status: specification-only checkpoint  
 Originating issue: #18 — Validate operative-context retrieval against frozen acceptance targets  
-Dependencies: #16 and #17, merged in `9ddc856`
+Dependencies: #6–#10 benchmark foundation, plus #16 and #17, merged in
+`9ddc856`
 
 ## Scope and non-goals
 
@@ -20,9 +21,9 @@ acceptance result, not hidden by a code or target change.
 
 ## Acceptance contract and evidence
 
-The authoritative inputs are the frozen artifacts from #10: corpus/generator
-outputs, task and gold fixtures, baseline definitions, safety evaluator, and
-report schema. The acceptance report MUST separately show, for every scale and
+The authoritative inputs are the frozen artifacts from #6–#10: corpus/generator
+outputs, task and gold fixtures, baseline definitions, safety evaluator, runner,
+and report schema. The acceptance report MUST separately show, for every scale and
 baseline: operative recall, unsafe inclusion, conflict detection, coverage
 truthfulness, agent-visible UTF-8 bytes/tokens, repeated tokens, tool calls,
 and secondary local-resource diagnostics. It MUST identify numerator,
@@ -52,7 +53,11 @@ fixtures support it. Preserve the canonical-data read-only boundary.
 
 ## Affected artifacts and commands
 
-- `scripts/run_retrieval_benchmark.py` and benchmark report fixtures;
+- `scripts/run_retrieval_benchmark.py`, a new Issue-18-only task-context adapter
+  or benchmark entry point, and benchmark report fixtures;
+- frozen `benchmark_runner.py`, `retrieval_baselines.py`, and target fixtures
+  remain unchanged; the adapter composes with them without changing baseline
+  definitions or thresholds;
 - `contracts/fixtures/` and generated schemas only if a validation gap is
   discovered (no gold-label changes);
 - focused retrieval, safety, Plugin, and cross-component tests; and
