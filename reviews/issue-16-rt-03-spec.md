@@ -24,7 +24,14 @@ delegates parsing/resolution/rendering to the packaged Core behavior, and
 returns the RT-01 response including the exact agent-visible capsule.
 
 `read_decision_audit` accepts `project`, one or more stable `decision_ids`, and
-an optional `include_related` flag. It returns decision text, rationale,
+an optional `include_related` flag. Its response uses the versioned
+`context-library/decision-audit-response` contract:
+
+```json
+{"schema": "context-library/decision-audit-response", "schema_version": 1}
+```
+
+It returns decision text, rationale,
 evidence references, declared/effective provenance, source scope, supersession,
 conflict, applicability, and register revision. It never returns write-capable
 commands or credentials and rejects IDs/path components that escape the
@@ -58,7 +65,7 @@ Plugin smoke, packaging, contracts, and read-only tests remain green.
 - contracts/plugin documentation.
 
 Validation commands are `PYTHONPATH=src poetry run pytest -q
-tests/plugin/test_mcp_read_only.py tests/plugin/test_applicability_parity.py`,
+tests/plugin/test_mcp_read_only.py tests/integration/test_applicability_parity.py`,
 `PYTHONPATH=src make plugin-check`, `PYTHONPATH=src make contracts-check`, and
 `git diff --check`. All tests are offline and canonical-data read-only.
 
