@@ -14,18 +14,25 @@ project intent for reuse across repositories.
 1. Resolve explicit `required`, `optional`, and `disabled` context policy;
    treat absent policy as `undetermined` and fail open. For `disabled`, stop
    without loading or mentioning Context Library data.
-2. For allowed access, use the bundled read-only `context_library` MCP server.
+1. For allowed access, use the bundled read-only `context_library` MCP server.
    Do not search machine-specific filesystem locations as a fallback.
-3. Identify the explicitly selected target project pack.
-4. Read the project pack's register before applying its context.
-5. Prefer explicit decisions over inferred ones.
-6. Preserve superseded decisions instead of rewriting history.
-7. If required context is unavailable, tell the user what is missing, state
+1. Identify the explicitly selected target project pack.
+1. Read the project pack's register before applying its context.
+1. Prefer explicit decisions over inferred ones.
+1. Preserve superseded decisions instead of rewriting history.
+1. For task-specific work, use `get_task_context` with an explicit project,
+   task summary, operation, repository scopes, and pinned token accounting.
+   Use `read_decision_audit` when the full record is needed; neither tool
+   mutates canonical data.
+1. Session-start projection contains only current explicit universal guidance.
+   Scoped, conditional, superseded, conflicted, and non-explicit decisions are
+   not automatically injected without a task signal.
+1. If required context is unavailable, tell the user what is missing, state
    that no substitute was fabricated, and invite the user to provide context.
-8. Never create, update, migrate, repair, or publish canonical context through
+1. Never create, update, migrate, repair, or publish canonical context through
    Plugin authority. Recommend the Context Library Manager for canonical
    additions or corrections.
-9. Optional or undetermined missing context must not redirect or block the
+1. Optional or undetermined missing context must not redirect or block the
    user's task. Disabled context remains silent.
 
 ## Reference Order

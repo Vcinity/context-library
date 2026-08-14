@@ -425,7 +425,7 @@ def _scope_for(decision: Decision, config: Config) -> tuple[str, ...]:
     return tuple(sorted(set(scopes)))
 
 
-def compile_projection(source: Source, config: Config) -> Compilation:
+def compile_projection(source: Source, config: Config, *, automatic: bool = False) -> Compilation:
     decisions = parse_decisions(source.text)
     by_id = {decision.decision_id: decision for decision in decisions}
     effective_provenance = _effective_provenances(by_id)
@@ -439,17 +439,36 @@ def compile_projection(source: Source, config: Config) -> Compilation:
             superseded_by.setdefault(old_id, []).append(decision.decision_id)
     active = [decision for decision in decisions if decision.decision_id not in superseded_by]
     active_ids = {decision.decision_id for decision in active}
-    for decision in active:
-        if effective_provenance[decision.decision_id] != "explicit" or decision.applies_when:
-            continue
-        decision_scopes = set(_scope_for(decision, config))
-        overlap = {
-            other_id
-            for other_id in active_ids.intersection(decision.conflicts_with)
-            if not by_id[other_id].applies_when and decision_scopes.intersection(_scope_for(by_id[other_id], config))
-        }
-        if overlap:
-            raise ProjectionError(f"conflicting active decisions: {decision.decision_id} and {sorted(overlap)[0]}")
+    conflicted_ids: set[str] = set()
+    if automatic:
+        # Automatic projection is deliberately conservative.  A universal
+        # decision that conflicts with scoped guidance is not safe to place in
+        # the always-active AGENTS.md hot path.
+        for decision in active:
+            overlap = active_ids.intersection(decision.conflicts_with)
+            conflicted_ids.update(overlap)
+            if overlap:
+                conflicted_ids.add(decision.decision_id)
+        conflict_groups: dict[str, list[str]] = {}
+        for decision in active:
+            if decision.conflict_key:
+                conflict_groups.setdefault(decision.conflict_key, []).append(decision.decision_id)
+        for identifiers in conflict_groups.values():
+            if len(identifiers) > 1:
+                conflicted_ids.update(identifiers)
+    else:
+        for decision in active:
+            if effective_provenance[decision.decision_id] != "explicit" or decision.applies_when:
+                continue
+            decision_scopes = set(_scope_for(decision, config))
+            overlap = {
+                other_id
+                for other_id in active_ids.intersection(decision.conflicts_with)
+                if not by_id[other_id].applies_when
+                and decision_scopes.intersection(_scope_for(by_id[other_id], config))
+            }
+            if overlap:
+                raise ProjectionError(f"conflicting active decisions: {decision.decision_id} and {sorted(overlap)[0]}")
     conflict_keys: dict[tuple[str, str], tuple[str, str]] = {}
     constraints: list[Constraint] = []
     excluded: list[dict[str, object]] = []
@@ -463,6 +482,10 @@ def compile_projection(source: Source, config: Config) -> Compilation:
             reason = "non-authoritative"
         elif decision.applies_when:
             reason = "unevaluated-applicability"
+        elif automatic and decision.affected_layers:
+            reason = "scoped"
+        elif automatic and decision.decision_id in conflicted_ids:
+            reason = "conflicted"
         elif not scopes:
             reason = "unmapped-affected-layer"
         if reason:
@@ -845,7 +868,7 @@ def _projection_lock(root: Path):
             fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
-def prepare(root: Path) -> Compilation:
+def prepare(root: Path, *, automatic: bool = False) -> Compilation:
     if not root.is_dir():
         raise ProjectionError(f"activation root is unavailable: {root}")
     requirement = resolve_context_policy(root).requirement
@@ -865,12 +888,12 @@ def prepare(root: Path) -> Compilation:
     if selected is None:
         raise ProjectionError(f"configured project pack is unavailable: {config.project}")
     source = load_source(source_root, config.project, selected)
-    return compile_projection(source, config)
+    return compile_projection(source, config, automatic=automatic)
 
 
-def sync(root: Path) -> bool:
+def sync(root: Path, *, automatic: bool = False) -> bool:
     with _projection_lock(root):
-        compilation = prepare(root)
+        compilation = prepare(root, automatic=automatic)
         existing = _read_sidecar(root, required=False)
         target_scopes = set(compilation.blocks)
         prior_artifacts = _artifact_map(existing)
@@ -908,8 +931,8 @@ def _validate_sidecar(sidecar: dict[str, object], compilation: Compilation) -> N
         raise CheckError("projection sidecar is stale, malformed, or inconsistent with the source")
 
 
-def check(root: Path) -> None:
-    compilation = prepare(root)
+def check(root: Path, *, automatic: bool = False) -> None:
+    compilation = prepare(root, automatic=automatic)
     try:
         sidecar = _read_sidecar(root, required=True)
         assert sidecar is not None

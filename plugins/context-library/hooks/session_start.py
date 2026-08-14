@@ -63,12 +63,12 @@ def main() -> None:
             )
         return
     try:
-        projection.check(root)
+        projection.check(root, automatic=True)
         print(f"Context Library projection already current in {root}.")
         return
     except projection.CheckError:
         try:
-            changed = projection.sync(root)
+            changed = projection.sync(root, automatic=True)
         except (OSError, projection.ProjectionError) as exc:
             if policy.requirement == "required":
                 required_notice(
@@ -109,11 +109,11 @@ def diagnostics() -> dict[str, object]:
         result["availability"] = "ambiguous" if policy.requirement == "required" else None
         return result
     try:
-        compilation = projection.prepare(root)
+        compilation = projection.prepare(root, automatic=True)
         result["source_digest"] = compilation.source.digest
         result["availability"] = "available"
         try:
-            projection.check(root)
+            projection.check(root, automatic=True)
             result["projection_fresh"] = True
         except projection.CheckError:
             result["availability"] = "stale-projection"

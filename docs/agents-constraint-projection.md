@@ -37,8 +37,8 @@ and replaceable.
 
 ## Agent-Facing Hot Path
 
-The generated `AGENTS.md` block contains only current explicit decisions that
-apply to the repository or subtree. Keep it short and direct:
+The generated `AGENTS.md` block contains only current explicit universal
+decisions during automatic session-start projection. Keep it short and direct:
 
 ```markdown
 <!-- context-library:begin
@@ -58,9 +58,11 @@ Do not include rationale, evidence excerpts, decisionmaker history, inferred
 guidance, assumptions, or a provenance legend in the hot path. Stable decision
 IDs provide the link to those details.
 
-Aim for roughly 5-15 non-overlapping constraints in any one applicable file.
-When reliable affected-layer metadata exists, place component-specific
-constraints in nested `AGENTS.md` files instead of expanding the root block.
+Aim for roughly 5-15 non-overlapping constraints in the automatic hot path.
+Affected-layer, conditional, superseded, conflicted, inferred, and assumed
+guidance stays out of that path. Retrieve scoped or conditional context with
+the explicit task-context MCP request when a task signal is available, or use
+an explicitly requested on-demand operation.
 
 ## Provenance Sidecar
 
@@ -232,9 +234,9 @@ inherits the weakest source.
 
 | Trigger | Default behavior |
 | --- | --- |
-| On demand | Sync |
-| Plugin installation or first session | Sync when project is unambiguous |
-| Later session start | Check, then sync safely when stale |
+| On demand | Sync using the requested projection mode |
+| Plugin installation or first session | Universal-only sync when project is unambiguous |
+| Later session start | Check, then universal-only sync safely when stale |
 | Pre-commit | Check only |
 | CI | Check only and fail stale projections |
 | Post-checkout or post-merge | Optional sync integration |
@@ -259,10 +261,11 @@ Automatic sync stops and reports instead of overwriting when:
 - parsing or provenance is incomplete
 - condensation would strengthen the authority of the source
 
-Only explicit current decisions can gate agent behavior. Inferred material can
-cause a concise confirmation warning; assumed material can only become a
-question or unverified note. Ratification creates a new explicit decision in
-the companion library and preserves the earlier record.
+Only explicit current universal decisions can enter automatic `AGENTS.md`
+guidance. Scoped, conditional, superseded, conflicted, inferred, and assumed
+material stays in the sidecar or is returned by explicit task-context/audit
+requests. Ratification creates a new explicit decision in the companion
+library and preserves the earlier record.
 
 ## Source Schema Requirements
 
@@ -287,9 +290,10 @@ This plugin repository owns compiler behavior, projection formats, hooks, and
 validation. It does not own canonical project decisions. Source decisions and
 human ratification remain in the companion library repository.
 
-Generated projection artifacts should normally be committed in consumer
-repositories so constraints work offline and changes are reviewable. Richer
-task-specific context may remain local and on demand.
+Generated universal projection artifacts should normally be committed in
+consumer repositories so constraints work offline and changes are reviewable.
+Richer scoped or task-specific context remains explicit, local, and on demand;
+session start has no task signal and must not inject it.
 
 ## Validation Scenarios
 
