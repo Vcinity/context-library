@@ -81,11 +81,17 @@ def initial_values(settings: Settings) -> dict[str, Any]:
 
 
 def project_baseline(settings: Settings, project: str) -> Settings:
-    if project == settings.project:
+    entry = settings.project_config(project)
+    if project == settings.project and entry.library_root == settings.library_root:
         return settings
-    path = settings.library_root / "projects" / project / "runtime.yaml"
+    path = entry.library_root / "runtime.yaml"
     if not path.is_file():
-        return replace(settings, project=project)
+        return replace(
+            settings,
+            project=project,
+            library_root=entry.library_root,
+            _allow_unmanaged_effective_project=project not in settings.managed_project_ids,
+        )
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     mapping = {
         "runtime": {
@@ -124,7 +130,14 @@ def project_baseline(settings: Settings, project: str) -> Settings:
         raise ConfigurationError(f"invalid project runtime configuration: {errors}")
     candidate["excluded_categories"] = tuple(candidate["excluded_categories"])
     sources = {**settings.field_sources, **dict.fromkeys(changes, "project-file")}
-    return replace(settings, project=project, field_sources=sources, **candidate)
+    return replace(
+        settings,
+        project=project,
+        library_root=entry.library_root,
+        field_sources=sources,
+        _allow_unmanaged_effective_project=project not in settings.managed_project_ids,
+        **candidate,
+    )
 
 
 def ensure_initial_revision(store: Store, settings: Settings, project: str) -> None:

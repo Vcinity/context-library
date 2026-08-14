@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -11,6 +12,26 @@ import yaml
 
 class ConfigurationError(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class ManagedProject:
+    """One explicitly enrolled project pack in a Manager deployment."""
+
+    id: str
+    library_root: Path
+    state_namespace: str
+    enabled: bool = True
+
+    def __post_init__(self) -> None:
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,127}", self.id):
+            raise ConfigurationError("managed project id must be a stable lowercase identifier")
+        if not self.library_root.is_absolute() or self.library_root == Path("/"):
+            raise ConfigurationError("managed project library_root must be a safe absolute path")
+        if self.library_root.is_symlink():
+            raise ConfigurationError("managed project library_root must not be a symlink")
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,127}", self.state_namespace):
+            raise ConfigurationError("managed project state_namespace must be stable")
 
 
 @dataclass(frozen=True)
@@ -52,9 +73,33 @@ class Settings:
     oidc_client_secret: str | None = None
     oidc_redirect_uri: str | None = None
     field_sources: dict[str, str] = field(default_factory=dict, compare=False)
+    managed_projects: tuple[ManagedProject, ...] = field(default_factory=tuple)
+    _allow_unmanaged_effective_project: bool = field(default=False, repr=False, compare=False)
+    explicit_project_registry: bool = field(init=False, default=False, repr=False, compare=False)
     ephemeral_session_secret: bool = field(init=False, default=False)
 
     def __post_init__(self):
+        object.__setattr__(self, "explicit_project_registry", bool(self.managed_projects))
+        if not self.managed_projects:
+            object.__setattr__(
+                self,
+                "managed_projects",
+                (
+                    ManagedProject(
+                        self.project,
+                        self.library_root / "projects" / self.project,
+                        self.project,
+                    ),
+                ),
+            )
+        ids = [item.id for item in self.managed_projects]
+        if len(ids) != len(set(ids)):
+            raise ConfigurationError("managed project ids must be unique")
+        namespaces = [item.state_namespace for item in self.managed_projects]
+        if len(namespaces) != len(set(namespaces)):
+            raise ConfigurationError("managed project state namespaces must be unique")
+        if self.project not in set(ids) and not self._allow_unmanaged_effective_project:
+            raise ConfigurationError("default project must be explicitly managed")
         if not self.csrf_secret:
             object.__setattr__(self, "csrf_secret", secrets.token_urlsafe(32))
         if not self.session_secret:
@@ -141,6 +186,7 @@ class Settings:
                 if not isinstance(raw, dict):
                     raise ConfigurationError("runtime configuration must be a mapping")
                 allowed = {
+                    "managed_projects",
                     "schema_version",
                     "runtime",
                     "autonomy",
@@ -152,6 +198,33 @@ class Settings:
                 if unknown or raw.get("schema_version") != 1:
                     raise ConfigurationError(f"unknown or invalid configuration fields: {sorted(unknown)}")
                 sections = {key: value for key, value in raw.items() if key != "schema_version"}
+                managed = sections.pop("managed_projects", None)
+                if managed is not None:
+                    if not isinstance(managed, list) or not managed:
+                        raise ConfigurationError("managed_projects must be a non-empty list")
+                    entries: list[ManagedProject] = []
+                    for entry in managed:
+                        if not isinstance(entry, dict) or set(entry) - {
+                            "id",
+                            "library_root",
+                            "state_namespace",
+                            "enabled",
+                        }:
+                            raise ConfigurationError("managed project has unknown fields")
+                        try:
+                            entries.append(
+                                ManagedProject(
+                                    id=entry["id"],
+                                    library_root=Path(entry["library_root"]),
+                                    state_namespace=entry.get("state_namespace", entry["id"]),
+                                    enabled=entry.get("enabled", True),
+                                )
+                            )
+                        except (KeyError, TypeError, ValueError) as exc:
+                            raise ConfigurationError("invalid managed project entry") from exc
+                    values["managed_projects"] = tuple(entries)
+                    if chosen not in {entry.id for entry in entries}:
+                        raise ConfigurationError("CLM_PROJECT must name an enrolled project")
                 mapping = {
                     "runtime": {
                         "database_url": "database_url",
@@ -222,3 +295,28 @@ class Settings:
     @property
     def storage_target(self) -> Path | str:
         return self.db_path if self.database_url.startswith("sqlite:///") else self.database_url
+
+    @property
+    def managed_project_ids(self) -> tuple[str, ...]:
+        return tuple(item.id for item in self.managed_projects if item.enabled)
+
+    def project_config(self, project: str) -> ManagedProject:
+        for entry in self.managed_projects:
+            if entry.id == project:
+                return entry
+        if not self.explicit_project_registry:
+            return ManagedProject(
+                project,
+                self.library_root / "projects" / project,
+                project,
+            )
+        raise ConfigurationError(f"project is not explicitly managed: {project}")
+
+    def for_project(self, project: str) -> "Settings":
+        entry = self.project_config(project)
+        return replace(
+            self,
+            project=project,
+            library_root=entry.library_root,
+            _allow_unmanaged_effective_project=project not in self.managed_project_ids,
+        )

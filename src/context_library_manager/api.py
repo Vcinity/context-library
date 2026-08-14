@@ -112,44 +112,47 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return wrapped
 
     now = utc_now()
-    app.state.store.db.execute(
-        "INSERT INTO projects(id,name,created_at,updated_at) VALUES(?,?,?,?) "
-        "ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at",
-        (settings.project, settings.project, now, now),
-    )
-    app.state.store.db.execute(
-        "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
-        "ON CONFLICT(id) DO NOTHING",
-        (
-            f"policy_{settings.project}_1",
-            settings.project,
-            "1",
-            json.dumps({"excluded_categories": settings.excluded_categories}),
-            now,
-        ),
-    )
+    managed = [entry for entry in settings.managed_projects if entry.enabled]
+    for entry in managed:
+        app.state.store.db.execute(
+            "INSERT INTO projects(id,name,created_at,updated_at) VALUES(?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET active=1,updated_at=excluded.updated_at",
+            (entry.id, entry.id, now, now),
+        )
+        app.state.store.db.execute(
+            "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(id) DO NOTHING",
+            (
+                f"policy_{entry.id}_1",
+                entry.id,
+                "1",
+                json.dumps({"excluded_categories": settings.excluded_categories}),
+                now,
+            ),
+        )
     app.state.store.db.commit()
     from .telemetry import DEFAULT_PRODUCERS, append_event, install_manifest
 
-    install_manifest(
-        app.state.store,
-        settings.project,
-        f"{VERSION}:default-producers-v1",
-        DEFAULT_PRODUCERS,
-        effective_at=now,
-    )
-    current_policy = app.state.store.db.execute(
-        "SELECT revision FROM policy_revisions WHERE project=? "
-        "ORDER BY CAST(revision AS INTEGER) DESC,created_at DESC LIMIT 1",
-        (settings.project,),
-    ).fetchone()
-    append_event(
-        app.state.store,
-        settings.project,
-        "policy",
-        "policy-snapshot",
-        payload={"revision": current_policy["revision"] if current_policy else "1"},
-    )
+    for entry in managed:
+        install_manifest(
+            app.state.store,
+            entry.id,
+            f"{VERSION}:default-producers-v1",
+            DEFAULT_PRODUCERS,
+            effective_at=now,
+        )
+        current_policy = app.state.store.db.execute(
+            "SELECT revision FROM policy_revisions WHERE project=? "
+            "ORDER BY CAST(revision AS INTEGER) DESC,created_at DESC LIMIT 1",
+            (entry.id,),
+        ).fetchone()
+        append_event(
+            app.state.store,
+            entry.id,
+            "policy",
+            "policy-snapshot",
+            payload={"revision": current_policy["revision"] if current_policy else "1"},
+        )
     rate_windows: dict[tuple[str, str], deque[float]] = defaultdict(deque)
 
     def secure(response):
@@ -378,6 +381,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     def project_allowed(request: Request, project: str) -> bool:
         principal = request.state.principal
+        if settings.explicit_project_registry and project not in settings.managed_project_ids:
+            return False
         configured = app.state.store.db.execute("SELECT 1 FROM projects WHERE id=? AND active=1", (project,)).fetchone()
         return bool(principal and configured and principal.allows(Capability.READ, project))
 

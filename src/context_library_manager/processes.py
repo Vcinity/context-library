@@ -9,67 +9,85 @@ from .config import Settings
 from .configuration import effective_settings
 from .db import Store
 from .notifications import deliver_pending, enqueue_reminders
+from .scheduler import FairProjectScheduler, ProjectRuntimeRegistry
 from .worker import Worker
 
 
 def run_role(process: str, settings: Settings) -> dict:
     if process == "worker":
         store = Store(settings.storage_target)
-        result = Worker(store, settings).run_once()
+        registry = ProjectRuntimeRegistry(settings.managed_projects)
+        scheduler = FairProjectScheduler(registry)
+        result = None
+        for _ in registry.enabled():
+            project = scheduler.next_project(registry.enabled())
+            if project is None:
+                break
+            result = Worker(store, settings.for_project(project)).run_once()
+            if result is not None:
+                break
         store.close()
         return result or {"status": "idle"}
     elif process == "scheduler":
         store = Store(settings.storage_target)
-        settings = effective_settings(store, settings, settings.project)
-        result = {
-            "recovered": store.recover_expired(
-                settings.project,
+        recovered = 0
+        requeued = 0
+        for project in settings.managed_project_ids:
+            project_settings = effective_settings(store, settings.for_project(project), project)
+            recovered += store.recover_expired(
+                project,
                 "scheduler",
-                settings.max_attempts,
-                settings.item_token_budget,
-                settings.cheap_profile_max_tokens,
-                settings.standard_profile_max_tokens,
-            ),
-            "requeued": store.requeue_retryable(settings.project, "scheduler", settings.max_attempts),
-        }
+                project_settings.max_attempts,
+                project_settings.item_token_budget,
+                project_settings.cheap_profile_max_tokens,
+                project_settings.standard_profile_max_tokens,
+            )
+            requeued += store.requeue_retryable(project, "scheduler", project_settings.max_attempts)
+        result = {"recovered": recovered, "requeued": requeued}
         store.close()
         return result
     elif process == "notifications":
         store = Store(settings.storage_target)
-        settings = effective_settings(store, settings, settings.project)
-        reminders = (
-            enqueue_reminders(store, settings.review_reminder_days)
-            if settings.notifications_enabled and settings.in_app_notifications
-            else 0
-        )
-        result = (
-            deliver_pending(
+        reminders = 0
+        delivered = 0
+        failed = 0
+        for project in settings.managed_project_ids:
+            project_settings = effective_settings(store, settings.for_project(project), project)
+            if not project_settings.notifications_enabled:
+                continue
+            if project_settings.in_app_notifications:
+                reminders += enqueue_reminders(store, project_settings.review_reminder_days, project)
+            delivery = deliver_pending(
                 store,
-                settings.webhook_url,
-                settings.webhook_secret,
+                project_settings.webhook_url,
+                project_settings.webhook_secret,
+                project=project,
             )
-            if settings.notifications_enabled
-            else {"delivered": 0, "failed": 0}
-        ) | {"reminders": reminders}
+            delivered += delivery["delivered"]
+            failed += delivery["failed"]
+        result = {"delivered": delivered, "failed": failed, "reminders": reminders}
         store.close()
         return result
     elif process == "reconcile":
         store = Store(settings.storage_target)
-        settings = effective_settings(store, settings, settings.project)
-        recovered = store.recover_expired(
-            settings.project,
-            "reconciler",
-            settings.max_attempts,
-            settings.item_token_budget,
-            settings.cheap_profile_max_tokens,
-            settings.standard_profile_max_tokens,
-        )
         complete_drain(store, "reconciler")
-        requeued = store.requeue_retryable(settings.project, "reconciler", settings.max_attempts)
+        recovered = 0
+        requeued = 0
         completed = 0
-        worker = Worker(store, settings, owner="reconciler")
-        while worker.run_once() is not None:
-            completed += 1
+        for project in settings.managed_project_ids:
+            project_settings = effective_settings(store, settings.for_project(project), project)
+            recovered += store.recover_expired(
+                project,
+                "reconciler",
+                project_settings.max_attempts,
+                project_settings.item_token_budget,
+                project_settings.cheap_profile_max_tokens,
+                project_settings.standard_profile_max_tokens,
+            )
+            requeued += store.requeue_retryable(project, "reconciler", project_settings.max_attempts)
+            worker = Worker(store, project_settings, owner=f"reconciler:{project}")
+            while worker.run_once() is not None:
+                completed += 1
         result = {
             "status": "completed",
             "recovered": recovered,
