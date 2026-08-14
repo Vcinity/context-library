@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 
 from context_library_manager.api import create_app
 from context_library_manager.config import ConfigurationError, ManagedProject, Settings
+from context_library_manager.db import Store
+from context_library_manager.processes import run_role
 from context_library_manager.scheduler import (
     FairProjectScheduler,
     ProjectLifecycle,
@@ -158,3 +160,43 @@ def test_versioned_registry_survives_postgres_restart(tmp_path):
     rows = restarted.state.store.db.execute("SELECT id,active FROM projects ORDER BY id").fetchall()
     assert [(row["id"], row["active"]) for row in rows] == [("alpha", 1), ("beta", 1)]
     restarted.state.store.close()
+
+
+def test_shared_worker_cycle_services_each_project_queue_once(tmp_path):
+    library = tmp_path / "library"
+    projects = tuple(
+        ManagedProject(name, library / "projects" / name, name)
+        for name in ("alpha", "beta")
+    )
+    settings = Settings(
+        "sqlite:///" + str(tmp_path / "runtime.db"),
+        library,
+        tmp_path / "state",
+        "alpha",
+        require_oidc=False,
+        managed_projects=projects,
+    )
+    store = Store(settings.storage_target)
+    for project_name in ("alpha", "beta"):
+        store.add_work(
+            project_name,
+            "source_batch",
+            f"source-{project_name}",
+            {"source": project_name},
+            "fixture:worker",
+        )
+    store.close()
+
+    result = run_role("worker", settings)
+
+    assert result["status"] == "processed"
+    assert len(result["results"]) == 2
+    check_store = Store(settings.storage_target)
+    completed = check_store.db.execute(
+        "SELECT project,state FROM work_items ORDER BY project"
+    ).fetchall()
+    check_store.close()
+    assert [(row["project"], row["state"]) for row in completed] == [
+        ("alpha", "succeeded"),
+        ("beta", "succeeded"),
+    ]
