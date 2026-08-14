@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "ConflictReference": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Conflict Id",
+          "type": "string"
+        },
+        "member_decision_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 2,
+          "title": "Member Decision Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "conflict_id",
+        "member_decision_ids"
+      ],
+      "title": "ConflictReference",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "applicable_conflicts": {
+      "items": {
+        "$ref": "#/$defs/ConflictReference"
+      },
+      "maxItems": 100,
+      "title": "Applicable Conflicts",
+      "type": "array"
+    },
+    "complete_coverage_possible": {
+      "title": "Complete Coverage Possible",
+      "type": "boolean"
+    },
+    "excluded_decision_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 1000,
+      "title": "Excluded Decision Ids",
+      "type": "array"
+    },
+    "expected_operative_decision_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 1000,
+      "title": "Expected Operative Decision Ids",
+      "type": "array"
+    },
+    "gold_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Gold Revision",
+      "type": "string"
+    },
+    "gold_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Gold Sha256",
+      "type": "string"
+    },
+    "judgment_required_decision_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 1000,
+      "title": "Judgment Required Decision Ids",
+      "type": "array"
+    },
+    "operation": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Operation",
+      "type": "string"
+    },
+    "repository_scopes": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Repository Scopes",
+      "type": "array"
+    },
+    "schema": {
+      "const": "context-library/retrieval-benchmark-task",
+      "default": "context-library/retrieval-benchmark-task",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "summary": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "task_id": {
+      "pattern": "^[a-z][a-z0-9-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Task Revision",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "task_revision",
+    "summary",
+    "operation",
+    "repository_scopes",
+    "complete_coverage_possible",
+    "gold_revision",
+    "gold_sha256"
+  ],
+  "title": "RetrievalBenchmarkTask",
+  "type": "object"
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "context-library/retrieval-benchmark-task",
+  "schema_version": 2,
+  "task_id": "synthetic-interface-change",
+  "task_revision": "task-r1",
+  "summary": "Invalid unsupported version.",
+  "operation": "inspect",
+  "repository_scopes": ["src/example"],
+  "expected_operative_decision_ids": ["same-id"],
+  "excluded_decision_ids": ["same-id"],
+  "complete_coverage_possible": true,
+  "gold_revision": "gold-r1",
+  "gold_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

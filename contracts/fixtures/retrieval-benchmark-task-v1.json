@@ -1,0 +1,21 @@
+{
+  "schema": "context-library/retrieval-benchmark-task",
+  "schema_version": 1,
+  "task_id": "synthetic-interface-change",
+  "task_revision": "task-r1",
+  "summary": "Choose the current interface guidance for a synthetic repository change.",
+  "operation": "modify source and tests",
+  "repository_scopes": ["src/example", "tests/example"],
+  "expected_operative_decision_ids": ["decision-current-interface"],
+  "judgment_required_decision_ids": ["decision-scope-review"],
+  "excluded_decision_ids": ["decision-old-interface", "decision-outside-repo"],
+  "applicable_conflicts": [
+    {
+      "conflict_id": "conflict-interface",
+      "member_decision_ids": ["decision-current-interface", "decision-old-interface"]
+    }
+  ],
+  "complete_coverage_possible": false,
+  "gold_revision": "gold-r1",
+  "gold_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

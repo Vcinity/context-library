@@ -23,6 +23,9 @@ SCHEMA_FAMILIES: dict[str, list[int]] = {
     "context-library/manager-query": [1],
     "context-library/missing-context-notice": [1],
     "context-library/observation": [1],
+    "context-library/retrieval-benchmark-gold": [1],
+    "context-library/retrieval-benchmark-report": [1],
+    "context-library/retrieval-benchmark-task": [1],
     "context-library/source-envelope": [1],
     "context-library/version": [1],
 }

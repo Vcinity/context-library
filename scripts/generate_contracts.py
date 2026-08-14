@@ -27,6 +27,11 @@ from context_library_core.maintainer_contracts import (
     SourceEnvelope,
 )
 from context_library_core.manager_contracts import ProposalSubmission, SessionIdentity
+from context_library_core.retrieval_contracts import (
+    RetrievalBenchmarkGold,
+    RetrievalBenchmarkReport,
+    RetrievalBenchmarkTask,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "contracts/schemas"
@@ -46,6 +51,9 @@ MODELS: dict[str, Type[BaseModel]] = {
     "manager-session-v1": SessionIdentity,
     "missing-context-notice-v1": MissingContextNotice,
     "observation-v1": Observation,
+    "retrieval-benchmark-gold-v1": RetrievalBenchmarkGold,
+    "retrieval-benchmark-report-v1": RetrievalBenchmarkReport,
+    "retrieval-benchmark-task-v1": RetrievalBenchmarkTask,
     "source-envelope-v1": SourceEnvelope,
     "version-v1": VersionEnvelope,
 }
