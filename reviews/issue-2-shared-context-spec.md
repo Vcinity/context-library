@@ -47,6 +47,11 @@ byte-equivalent. A missing required parent, cycle, duplicate edge, or
 ambiguous relationship fails closed. Legacy packs with no artifact remain
 standalone.
 
+For a transitive chain, every ancestor MUST authorize the ultimate child
+consumer in `shared_context_consumers`; authorizing only the immediate child
+does not authorize re-sharing to a grandchild. The resolver checks this rule at
+each hop and fails closed when any ancestor omits the ultimate consumer.
+
 The `required` field defaults to `true` when omitted; `order` defaults to
 zero. Both defaults are deterministic and fail closed for malformed values.
 
@@ -89,8 +94,9 @@ Positive cases cover one parent, multiple ordered parents, standalone legacy
 packs, and two parents sharing a common grandparent (a diamond graph) with a
 single deduplicated entry. Negative cases cover missing required parent,
 unauthorized parent (child absent from `shared_context_consumers`), cycle,
-duplicate identity, ambiguous graph, conflicting inherited decisions,
-supersession, and provenance preservation. Assertions compare observable
+unauthorized transitive parent (grandparent authorizes the immediate child but
+not the grandchild), cycle, duplicate identity, ambiguous graph, conflicting
+inherited decisions, supersession, and provenance preservation. Assertions compare observable
 decision IDs, source scope, status, conflict visibility, and non-mutating
 Plugin output across all consumers. A mutation test proves that filesystem
 adjacency alone does not create inheritance.

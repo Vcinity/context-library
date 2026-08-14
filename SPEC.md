@@ -404,7 +404,10 @@ authorization, missing required parents, cycles, duplicate edges, ambiguous
 graphs, or unsupported versions MUST fail closed. Filesystem adjacency MUST
 not create inheritance. Effective views MUST preserve source ownership,
 provenance, source digests, and conflict visibility and MUST bind one
-consistent source-digest snapshot per request.
+consistent source-digest and authorization-state snapshot per request. In a
+transitive chain, every ancestor MUST authorize the ultimate child consumer;
+authorizing only an immediate child MUST NOT authorize re-sharing to a
+grandchild.
 
 Pack discovery MUST NOT return the same logical project twice. Legacy
 selection MUST be represented as a compatibility location for one logical
