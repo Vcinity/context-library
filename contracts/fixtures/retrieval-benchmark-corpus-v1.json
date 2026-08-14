@@ -1,0 +1,313 @@
+{
+  "schema": "context-library/retrieval-benchmark-corpus",
+  "schema_version": 1,
+  "corpus_revision": "rb-02-r1",
+  "cases": [
+    {
+      "case_id": "lexical-synonym",
+      "case_revision": "r1",
+      "dimensions": ["lexical-mismatch", "synonyms"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-lexical-synonym",
+        "task_revision": "task-r1",
+        "summary": "Find the guidance for changing the synthetic service boundary.",
+        "operation": "modify source",
+        "repository_scopes": ["src/service"],
+        "expected_operative_decision_ids": ["rb02-lexical-current"],
+        "judgment_required_decision_ids": [],
+        "excluded_decision_ids": ["rb02-lexical-distractor"],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": true,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-lexical-synonym",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-lexical-current", "classification": "operative"},
+          {"decision_id": "rb02-lexical-distractor", "classification": "excluded", "exclusion_reason": "inapplicable"}
+        ],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-lexical-current", "text": "Service interfaces use explicit versioned boundaries.", "scope": "global", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-lexical-distractor", "text": "The example UI uses a compact label.", "scope": "global", "relation": "distractor", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "plausible-distractor",
+      "case_revision": "r1",
+      "dimensions": ["distractor"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-plausible-distractor",
+        "task_revision": "task-r1",
+        "summary": "Select the repository testing requirement for a parser change.",
+        "operation": "modify tests",
+        "repository_scopes": ["tests/parser"],
+        "expected_operative_decision_ids": ["rb02-test-current"],
+        "judgment_required_decision_ids": [],
+        "excluded_decision_ids": ["rb02-test-plausible"],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": true,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-plausible-distractor",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-test-current", "classification": "operative"},
+          {"decision_id": "rb02-test-plausible", "classification": "excluded", "exclusion_reason": "out-of-scope"}
+        ],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-test-current", "text": "Parser changes require a malformed-input regression test.", "scope": "tests/parser", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-test-plausible", "text": "Network integration tests use a nightly environment.", "scope": "tests/network", "relation": "plausible-distractor", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "supersession-chain",
+      "case_revision": "r1",
+      "dimensions": ["supersession"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-supersession-chain",
+        "task_revision": "task-r1",
+        "summary": "Use the current deployment rollback guidance.",
+        "operation": "change deployment",
+        "repository_scopes": ["deploy"],
+        "expected_operative_decision_ids": ["rb02-deploy-current"],
+        "judgment_required_decision_ids": [],
+        "excluded_decision_ids": ["rb02-deploy-old"],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": true,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-supersession-chain",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-deploy-current", "classification": "operative"},
+          {"decision_id": "rb02-deploy-old", "classification": "excluded", "exclusion_reason": "superseded"}
+        ],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-deploy-current", "text": "Rollback uses the last signed release manifest.", "scope": "deploy", "relation": "current", "supersedes": "rb02-deploy-old"},
+        {"decision_id": "rb02-deploy-old", "text": "Rollback uses the previous deployment directory.", "scope": "deploy", "relation": "superseded", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "unresolved-conflict",
+      "case_revision": "r1",
+      "dimensions": ["conflict"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-unresolved-conflict",
+        "task_revision": "task-r1",
+        "summary": "Expose both unresolved retention requirements.",
+        "operation": "design retention",
+        "repository_scopes": ["src/storage"],
+        "expected_operative_decision_ids": ["rb02-retention-a", "rb02-retention-b"],
+        "judgment_required_decision_ids": ["rb02-retention-review"],
+        "excluded_decision_ids": [],
+        "applicable_conflicts": [{"conflict_id": "rb02-retention-conflict", "member_decision_ids": ["rb02-retention-a", "rb02-retention-b"]}],
+        "complete_coverage_possible": false,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-unresolved-conflict",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-retention-a", "classification": "operative", "conflict_ids": ["rb02-retention-conflict"]},
+          {"decision_id": "rb02-retention-b", "classification": "operative", "conflict_ids": ["rb02-retention-conflict"]},
+          {"decision_id": "rb02-retention-review", "classification": "judgment-required"}
+        ],
+        "conflicts": [{"conflict_id": "rb02-retention-conflict", "member_decision_ids": ["rb02-retention-a", "rb02-retention-b"]}]
+      },
+      "decisions": [
+        {"decision_id": "rb02-retention-a", "text": "Retain records for seven days.", "scope": "src/storage", "relation": "conflicting", "supersedes": null},
+        {"decision_id": "rb02-retention-b", "text": "Retain records for thirty days.", "scope": "src/storage", "relation": "conflicting", "supersedes": null},
+        {"decision_id": "rb02-retention-review", "text": "A data owner must resolve the retention conflict.", "scope": "src/storage", "relation": "judgment-required", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "global-and-scoped",
+      "case_revision": "r1",
+      "dimensions": ["global-and-scoped"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-global-scoped",
+        "task_revision": "task-r1",
+        "summary": "Apply the global and project-specific review rules.",
+        "operation": "review project change",
+        "repository_scopes": ["projects/alpha"],
+        "expected_operative_decision_ids": ["rb02-global-review", "rb02-alpha-review"],
+        "judgment_required_decision_ids": [],
+        "excluded_decision_ids": ["rb02-beta-review"],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": true,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-global-scoped",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-global-review", "classification": "operative"},
+          {"decision_id": "rb02-alpha-review", "classification": "operative"},
+          {"decision_id": "rb02-beta-review", "classification": "excluded", "exclusion_reason": "out-of-scope"}
+        ],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-global-review", "text": "All changes require a review record.", "scope": "global", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-alpha-review", "text": "Alpha changes require a second reviewer.", "scope": "projects/alpha", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-beta-review", "text": "Beta changes require a release train.", "scope": "projects/beta", "relation": "out-of-scope", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "unresolved-applicability",
+      "case_revision": "r1",
+      "dimensions": ["unresolved-applicability"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-unresolved-applicability",
+        "task_revision": "task-r1",
+        "summary": "Separate applicable guidance from an unresolved environment rule.",
+        "operation": "configure runtime",
+        "repository_scopes": ["config"],
+        "expected_operative_decision_ids": ["rb02-runtime-current"],
+        "judgment_required_decision_ids": ["rb02-runtime-conditional"],
+        "excluded_decision_ids": [],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": false,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-unresolved-applicability",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-runtime-current", "classification": "operative"},
+          {"decision_id": "rb02-runtime-conditional", "classification": "judgment-required"}
+        ],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-runtime-current", "text": "Runtime configuration is reviewed before release.", "scope": "config", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-runtime-conditional", "text": "A region-specific override may apply if its service tier is confirmed.", "scope": "config", "relation": "conditional", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "insufficient-budget",
+      "case_revision": "r1",
+      "dimensions": ["insufficient-budget"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-insufficient-budget",
+        "task_revision": "task-r1",
+        "summary": "Return the complete operative set for a large synthetic change.",
+        "operation": "modify broad subsystem",
+        "repository_scopes": ["src", "tests", "docs"],
+        "expected_operative_decision_ids": ["rb02-budget-a", "rb02-budget-b", "rb02-budget-c"],
+        "judgment_required_decision_ids": [],
+        "excluded_decision_ids": [],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": true,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-insufficient-budget",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [
+          {"decision_id": "rb02-budget-a", "classification": "operative"},
+          {"decision_id": "rb02-budget-b", "classification": "operative"},
+          {"decision_id": "rb02-budget-c", "classification": "operative"}
+        ],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-budget-a", "text": "The broad change requires a migration note.", "scope": "docs", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-budget-b", "text": "The broad change requires a compatibility test.", "scope": "tests", "relation": "current", "supersedes": null},
+        {"decision_id": "rb02-budget-c", "text": "The broad change requires a rollback plan.", "scope": "src", "relation": "current", "supersedes": null}
+      ]
+    },
+    {
+      "case_id": "no-applicable-context",
+      "case_revision": "r1",
+      "dimensions": ["no-applicable-context"],
+      "task": {
+        "schema": "context-library/retrieval-benchmark-task",
+        "schema_version": 1,
+        "task_id": "synthetic-no-applicable-context",
+        "task_revision": "task-r1",
+        "summary": "Confirm that no decision applies to an unrelated documentation task.",
+        "operation": "edit unrelated notes",
+        "repository_scopes": ["notes"],
+        "expected_operative_decision_ids": [],
+        "judgment_required_decision_ids": [],
+        "excluded_decision_ids": ["rb02-unrelated"],
+        "applicable_conflicts": [],
+        "complete_coverage_possible": true,
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "gold": {
+        "schema": "context-library/retrieval-benchmark-gold",
+        "schema_version": 1,
+        "task_id": "synthetic-no-applicable-context",
+        "task_revision": "task-r1",
+        "gold_revision": "gold-r1",
+        "gold_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "labels": [{"decision_id": "rb02-unrelated", "classification": "excluded", "exclusion_reason": "inapplicable"}],
+        "conflicts": []
+      },
+      "decisions": [
+        {"decision_id": "rb02-unrelated", "text": "The deployment process uses signed release manifests.", "scope": "deploy", "relation": "inapplicable", "supersedes": null}
+      ]
+    }
+  ]
+}
