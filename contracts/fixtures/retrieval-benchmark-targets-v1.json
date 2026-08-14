@@ -1,0 +1,18 @@
+{
+  "schema": "context-library/retrieval-benchmark-targets",
+  "schema_version": 1,
+  "target_revision": "rb-06-r1",
+  "corpus_revision": "rb-02-r1",
+  "generator_revision": "rb-03-v1",
+  "tokenizer": {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+    "accounting_method": "tiktoken cl100k_base over exact serialized UTF-8 response"
+  },
+  "scales": [10, 100, 1000, 10000],
+  "minimum_relative_reduction": 0.2,
+  "maximum_agent_directed_tool_calls": 1,
+  "safety_required": true,
+  "operative_recall_required": 1.0
+}

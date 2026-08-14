@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 MARKDOWN_FILES := AGENTS.md ARCHITECTURE.md CHANGELOG.md IMPLEMENTATION_PROMPT.md MIGRATION.md README.md SPEC.md docs/DEPLOYMENT.md docs/PLUGIN_DEPLOYMENT.md docs/RECOVERY.md docs/TOOL_USE_CASES.md
 
-.PHONY: install plugin-install test lint format check contracts contracts-check plugin-build plugin-check ui-build ui-test e2e smoke package run openapi openapi-check
+.PHONY: install plugin-install test lint format check contracts contracts-check plugin-build plugin-check ui-build ui-test e2e smoke package run openapi openapi-check retrieval-benchmark
 
 install:
 	poetry sync --no-interaction
@@ -64,6 +64,9 @@ openapi:
 
 openapi-check:
 	poetry run python scripts/generate_openapi.py --check
+
+retrieval-benchmark:
+	PYTHONPATH=src poetry run python scripts/run_retrieval_benchmark.py --output /tmp/context-library-retrieval-benchmark
 
 e2e: ui-build
 	npx playwright test
