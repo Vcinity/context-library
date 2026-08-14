@@ -245,3 +245,37 @@ def test_shared_worker_cycle_services_each_project_queue_once(tmp_path):
         ("alpha", "succeeded"),
         ("beta", "succeeded"),
     ]
+
+
+def test_registry_changes_are_audited_without_deleting_history(tmp_path):
+    library = tmp_path / "library"
+    for name in ("alpha", "beta"):
+        (library / "projects" / name).mkdir(parents=True)
+    database_url = "sqlite:///" + str(tmp_path / "runtime.db")
+    first = Settings(
+        database_url,
+        library,
+        tmp_path / "state",
+        "alpha",
+        require_oidc=False,
+        development_mode=True,
+        session_secret="registry-change-session",
+        managed_projects=(
+            ManagedProject("alpha", library / "projects" / "alpha", "alpha"),
+            ManagedProject("beta", library / "projects" / "beta", "beta"),
+        ),
+    )
+    first_app = create_app(first)
+    first_app.state.store.close()
+
+    second = replace(first, managed_projects=(first.managed_projects[0],))
+    second_app = create_app(second)
+    beta = second_app.state.store.db.execute(
+        "SELECT active,lifecycle FROM projects WHERE id='beta'"
+    ).fetchone()
+    assert (beta["active"], beta["lifecycle"]) == (0, "disabled")
+    events = second_app.state.store.db.execute(
+        "SELECT event_type FROM audit_events WHERE project='beta' ORDER BY created_at"
+    ).fetchall()
+    assert [row["event_type"] for row in events] == ["project-enrolled", "project-removed"]
+    second_app.state.store.close()

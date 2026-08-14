@@ -312,11 +312,19 @@ class Settings:
             )
         raise ConfigurationError(f"project is not explicitly managed: {project}")
 
+    @staticmethod
+    def _manager_library_root(entry: ManagedProject) -> Path:
+        """Return the canonical root expected by Manager/Maintainer services."""
+        project_root = entry.library_root
+        if project_root.name == entry.id and project_root.parent.name == "projects":
+            return project_root.parent.parent
+        return project_root
+
     def for_project(self, project: str) -> "Settings":
         entry = self.project_config(project)
         return replace(
             self,
             project=project,
-            library_root=entry.library_root,
+            library_root=self._manager_library_root(entry),
             _allow_unmanaged_effective_project=project not in self.managed_project_ids,
         )

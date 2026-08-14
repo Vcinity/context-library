@@ -89,7 +89,7 @@ def project_baseline(settings: Settings, project: str) -> Settings:
         return replace(
             settings,
             project=project,
-            library_root=entry.library_root,
+            library_root=settings._manager_library_root(entry),
             _allow_unmanaged_effective_project=project not in settings.managed_project_ids,
         )
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -133,7 +133,7 @@ def project_baseline(settings: Settings, project: str) -> Settings:
     return replace(
         settings,
         project=project,
-        library_root=entry.library_root,
+        library_root=settings._manager_library_root(entry),
         field_sources=sources,
         _allow_unmanaged_effective_project=project not in settings.managed_project_ids,
         **candidate,

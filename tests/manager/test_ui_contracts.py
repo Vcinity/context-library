@@ -353,6 +353,7 @@ def test_packaged_migration_assets_are_discoverable():
             "005_agent_run_reservations.sql",
             "006_telemetry_lineage.sql",
             "007_notification_claims.sql",
+            "008_project_lifecycle.sql",
         ]
 
 
@@ -377,6 +378,7 @@ def test_concurrent_sqlite_startup_serializes_migrations(tmp_path):
             "005_agent_run_reservations",
             "006_telemetry_lineage",
             "007_notification_claims",
+            "008_project_lifecycle",
         ]
         for versions in results
     )

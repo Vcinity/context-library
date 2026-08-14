@@ -120,6 +120,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     now = utc_now()
     managed = list(settings.managed_projects)
+    configured_ids = {entry.id for entry in managed}
+    existing_projects = {
+        row["id"]: row
+        for row in app.state.store.db.execute("SELECT id,active,lifecycle FROM projects").fetchall()
+    }
+    for removed_id, row in existing_projects.items():
+        if removed_id in configured_ids or (not row["active"] and row["lifecycle"] == "disabled"):
+            continue
+        app.state.store.db.execute(
+            "UPDATE projects SET active=0,lifecycle='disabled',lifecycle_version=lifecycle_version+1,"
+            "updated_at=? WHERE id=?",
+            (now, removed_id),
+        )
+        app.state.store.event(
+            None,
+            "runtime:configuration",
+            "project-removed",
+            {"project": removed_id, "reason": "removed from managed_projects"},
+            removed_id,
+        )
     for entry in managed:
         app.state.store.db.execute(
             "INSERT INTO projects(id,name,created_at,updated_at,active,lifecycle) VALUES(?,?,?,?,?,?) "
@@ -128,6 +148,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "updated_at=excluded.updated_at",
             (entry.id, entry.id, now, now, int(entry.enabled), "enabled" if entry.enabled else "disabled"),
         )
+        if settings.explicit_project_registry and entry.id not in existing_projects:
+            app.state.store.event(
+                None,
+                "runtime:configuration",
+                "project-enrolled",
+                {
+                    "project": entry.id,
+                    "library_root": str(entry.library_root),
+                    "state_namespace": entry.state_namespace,
+                },
+                entry.id,
+            )
         app.state.store.db.execute(
             "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
             "ON CONFLICT(id) DO NOTHING",
