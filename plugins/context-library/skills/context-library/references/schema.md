@@ -29,7 +29,10 @@ Use exact identifiers in `supersedes`, `sources`, and conflict references when
 the projection compiler must resolve them. Narrative history remains useful to
 readers but is not guessed into identifiers.
 
-Only current explicit decisions can become automatic constraints. Synthesized
-records inherit the weakest provenance of all transitive sources. Conditional
-decisions and affected layers without an exact repository mapping remain in the
-provenance sidecar rather than entering `AGENTS.md`.
+Only current explicit universal decisions can become automatic constraints:
+there must be no affected layer, conditional applicability, supersession, or
+unresolved conflict. Scoped, conditional, superseded, conflicted, inferred,
+and assumed records remain auditable but do not enter the session-start
+`AGENTS.md` hot path. Use the explicit task-context request when a task signal
+makes scoped context relevant. Synthesized records inherit the weakest
+provenance of all transitive sources.

@@ -146,7 +146,10 @@ Environment variables remain higher-precedence runtime overrides:
 If the consumer uses projection, select the project explicitly in the
 consumer's committed `.context-library/config.json`, or set
 `CONTEXT_LIBRARY_PROJECT` for a deliberate session override. An explicit
-context policy is required before projection writes are allowed.
+context policy is required before projection writes are allowed. Automatic
+session-start projection includes only current explicit universal constraints;
+use the read-only task-context MCP tool for scoped or conditional guidance
+after an explicit task signal.
 
 Codex installs and enables the Plugin from either the `/plugin` menu or the
 installer above. Plugin command hooks require a separate trust decision: open
