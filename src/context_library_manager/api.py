@@ -21,7 +21,7 @@ from urllib.request import urlopen
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from context_library_core.maintainer_contracts import HarvestBatch
@@ -69,7 +69,7 @@ from .contracts import (
     ProposalSubmission,
     SessionProjectSelection,
 )
-from .db import Store
+from .db import ProjectLifecycleConflict, Store
 from .domain import (
     Contribution,
     Envelope,
@@ -84,6 +84,13 @@ from .routing import route
 from .service import SourceIdempotencyConflict, intake_harvest_batch, intake_source
 from .web import ROOT as WEB_ROOT
 from .web import render as render_template
+
+
+class ProjectLifecycleControl(BaseModel):
+    lifecycle: str = Field(min_length=1, max_length=32)
+    expected_version: int = Field(ge=1)
+    reason: str = Field(min_length=1, max_length=2000)
+    idempotency_key: str = Field(min_length=1, max_length=256)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -115,9 +122,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     managed = list(settings.managed_projects)
     for entry in managed:
         app.state.store.db.execute(
-            "INSERT INTO projects(id,name,created_at,updated_at,active) VALUES(?,?,?,?,?) "
-            "ON CONFLICT(id) DO UPDATE SET active=excluded.active,updated_at=excluded.updated_at",
-            (entry.id, entry.id, now, now, int(entry.enabled)),
+            "INSERT INTO projects(id,name,created_at,updated_at,active,lifecycle) VALUES(?,?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET active=excluded.active,"
+            "lifecycle=CASE WHEN excluded.active=0 THEN 'disabled' ELSE projects.lifecycle END,"
+            "updated_at=excluded.updated_at",
+            (entry.id, entry.id, now, now, int(entry.enabled), "enabled" if entry.enabled else "disabled"),
         )
         app.state.store.db.execute(
             "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
@@ -968,6 +977,78 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         require_project(request, project)
         require_capability(request, Capability.READ, project)
         return envelope(request, data=runtime_health_data(project))
+
+    @app.get("/api/v1/projects/{project}/lifecycle")
+    def project_lifecycle(project: str, request: Request):
+        if settings.explicit_project_registry and project not in {
+            entry.id for entry in settings.managed_projects
+        }:
+            raise HTTPException(404, {"code": "project-not-found", "message": "project not configured"})
+        require_capability(request, Capability.READ, project)
+        row = app.state.store.project_lifecycle(project)
+        if not row:
+            raise HTTPException(404, {"code": "project-not-found", "message": "project not configured"})
+        return envelope(request, data=dict(row))
+
+    @app.post("/api/v1/projects/{project}/lifecycle")
+    @serialized_store_write
+    def transition_project_lifecycle(project: str, body: ProjectLifecycleControl, request: Request):
+        if settings.explicit_project_registry and project not in {
+            entry.id for entry in settings.managed_projects
+        }:
+            raise HTTPException(404, {"code": "project-not-found", "message": "project not configured"})
+        require_csrf(request)
+        require_capability(request, Capability.ADMIN, project)
+        actor = actor_for(request)
+        route_name = f"POST:/api/v1/projects/{project}/lifecycle"
+        digest = app.state.store.digest(body.model_dump(mode="json"))
+        existing = app.state.store.db.execute(
+            "SELECT request_digest,response_status,response FROM idempotency_records "
+            "WHERE actor=? AND project=? AND route=? AND idempotency_key=?",
+            (actor, project, route_name, body.idempotency_key),
+        ).fetchone()
+        if existing:
+            if existing["request_digest"] != digest:
+                raise HTTPException(409, {"code": "idempotency-conflict", "message": "idempotency key was reused"})
+            return JSONResponse(json.loads(existing["response"]), status_code=existing["response_status"])
+        try:
+            result = app.state.store.transition_project_lifecycle(
+                project,
+                body.lifecycle,
+                body.expected_version,
+                actor,
+                body.reason,
+            )
+        except ProjectLifecycleConflict as exc:
+            raise HTTPException(
+                409,
+                {
+                    "code": "project-lifecycle-conflict",
+                    "message": "project lifecycle version is stale",
+                    "current_lifecycle": exc.current.get("lifecycle"),
+                    "current_version": exc.current.get("lifecycle_version"),
+                },
+            ) from exc
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(409, {"code": "invalid-project-lifecycle", "message": str(exc)}) from exc
+        response = envelope(request, data=result)
+        app.state.store.db.execute(
+            "INSERT INTO idempotency_records(id,actor,project,route,idempotency_key,request_digest,"
+            "response_status,response,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+            (
+                "idem_" + app.state.store.digest([actor, project, route_name, body.idempotency_key])[:24],
+                actor,
+                project,
+                route_name,
+                body.idempotency_key,
+                digest,
+                200,
+                json.dumps(response),
+                utc_now(),
+            ),
+        )
+        app.state.store.db.commit()
+        return JSONResponse(response)
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon():

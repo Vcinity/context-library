@@ -113,6 +113,51 @@ def test_versioned_registry_enrolls_only_explicit_projects(tmp_path, monkeypatch
     assert client.get("/api/v1/projects/beta/overview").status_code == 200
     assert client.get("/api/v1/projects/discovered/overview").status_code == 404
     assert client.get("/api/v1/projects/gamma/overview").status_code == 404
+    lifecycle = client.get("/api/v1/projects/alpha/lifecycle")
+    assert lifecycle.status_code == 200
+    assert lifecycle.json()["data"]["lifecycle"] == "enabled"
+    lifecycle_path = "/api/v1/projects/alpha/lifecycle"
+    csrf = client.get(
+        "/api/v1/session/csrf",
+        params={"method": "POST", "path": lifecycle_path},
+    ).json()["data"]["csrf_token"]
+    transition = client.post(
+        lifecycle_path,
+        headers={"X-CSRF-Token": csrf},
+        json={
+            "lifecycle": "paused",
+            "expected_version": 1,
+            "reason": "fixture pause",
+            "idempotency_key": "fixture-lifecycle-1",
+        },
+    )
+    assert transition.status_code == 200
+    assert transition.json()["data"]["lifecycle"] == "paused"
+    replay = client.post(
+        lifecycle_path,
+        headers={"X-CSRF-Token": csrf},
+        json={
+            "lifecycle": "paused",
+            "expected_version": 1,
+            "reason": "fixture pause",
+            "idempotency_key": "fixture-lifecycle-1",
+        },
+    )
+    assert replay.status_code == 200
+    assert replay.json() == transition.json()
+    stale = client.post(
+        lifecycle_path,
+        headers={"X-CSRF-Token": csrf},
+        json={
+            "lifecycle": "enabled",
+            "expected_version": 1,
+            "reason": "stale fixture",
+            "idempotency_key": "fixture-lifecycle-stale",
+        },
+    )
+    assert stale.status_code == 409
+    audit = client.get("/api/v1/projects/alpha/audit").json()["data"]["items"]
+    assert any(item["event_type"] == "project-lifecycle-transition" for item in audit)
     enrolled = app.state.store.db.execute("SELECT id FROM projects ORDER BY id").fetchall()
     assert [row["id"] for row in enrolled] == ["alpha", "beta", "gamma"]
     gamma = app.state.store.db.execute("SELECT active FROM projects WHERE id='gamma'").fetchone()
