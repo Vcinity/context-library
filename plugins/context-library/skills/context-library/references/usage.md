@@ -12,6 +12,10 @@ Use the context library as a shared map from project intent to implementation ch
   checkouts.
 - Look for supersession notes before reusing an older idea.
 - Treat explicit decisions as current unless a newer decision supersedes them.
+- Use `get_task_context` for task-specific retrieval with an explicit project
+  and task signal. Use `read_decision_audit` for on-demand full records.
+- Session-start projection contains only current explicit universal constraints;
+  it does not inject scoped or conditional context without a task signal.
 - If required context is unavailable, notify the user and proceed only as
   allowed by higher-level instructions without fabricating a substitute.
 - Optional or undetermined missing context does not interfere.
