@@ -95,7 +95,7 @@ packs, and two parents sharing a common grandparent (a diamond graph) with a
 single deduplicated entry. Negative cases cover missing required parent,
 unauthorized parent (child absent from `shared_context_consumers`), cycle,
 unauthorized transitive parent (grandparent authorizes the immediate child but
-not the grandchild), cycle, duplicate identity, ambiguous graph, conflicting
+not the grandchild), duplicate identity, ambiguous graph, conflicting
 inherited decisions, supersession, and provenance preservation. Assertions compare observable
 decision IDs, source scope, status, conflict visibility, and non-mutating
 Plugin output across all consumers. A mutation test proves that filesystem
