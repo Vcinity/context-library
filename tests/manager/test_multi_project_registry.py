@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import replace
 from pathlib import Path
 
@@ -114,3 +115,46 @@ def test_versioned_registry_enrolls_only_explicit_projects(tmp_path, monkeypatch
     assert [row["id"] for row in enrolled] == ["alpha", "beta", "gamma"]
     gamma = app.state.store.db.execute("SELECT active FROM projects WHERE id='gamma'").fetchone()
     assert gamma["active"] == 0
+
+
+@pytest.mark.skipif(not os.getenv("CLM_TEST_POSTGRES_URL"), reason="requires disposable PostgreSQL")
+def test_versioned_registry_survives_postgres_restart(tmp_path):
+    library = tmp_path / "library"
+    for name in ("alpha", "beta"):
+        (library / "projects" / name).mkdir(parents=True)
+    settings = Settings(
+        os.environ["CLM_TEST_POSTGRES_URL"],
+        library,
+        tmp_path / "state",
+        "alpha",
+        require_oidc=False,
+        allow_local_dev_identity=True,
+        development_mode=True,
+        session_secret="postgres-multi-project-session",
+        managed_projects=(
+            ManagedProject("alpha", library / "projects" / "alpha", "alpha"),
+            ManagedProject("beta", library / "projects" / "beta", "beta"),
+        ),
+    )
+    app = create_app(settings)
+    client = TestClient(app, base_url="https://testserver")
+    login = client.post(
+        "/auth/dev-login",
+        json={
+            "subject": "fixture:postgres-admin",
+            "display_name": "Postgres Admin",
+            "capabilities": ["admin"],
+            "projects": ["alpha", "beta"],
+            "selected_project": "alpha",
+        },
+    )
+    assert login.status_code == 200
+    assert client.get("/api/v1/projects/beta/overview").status_code == 200
+    app.state.store.close()
+
+    restarted = create_app(settings)
+    restarted_client = TestClient(restarted, base_url="https://testserver")
+    assert restarted_client.get("/api/v1/health").status_code == 200
+    rows = restarted.state.store.db.execute("SELECT id,active FROM projects ORDER BY id").fetchall()
+    assert [(row["id"], row["active"]) for row in rows] == [("alpha", 1), ("beta", 1)]
+    restarted.state.store.close()
