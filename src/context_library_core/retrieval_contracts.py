@@ -5,7 +5,7 @@ import math
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from context_library_core.contracts import Contract
 
@@ -153,8 +153,6 @@ class BaselineComparison(Contract):
 
     @model_validator(mode="after")
     def reductions_are_deterministic(self) -> "BaselineComparison":
-        if self.reduction_tokens < 0:
-            raise ValueError("reduction_tokens must not be negative")
         expected = self.reduction_tokens / self.baseline_agent_visible_tokens
         if not math.isclose(self.relative_reduction, expected, rel_tol=0, abs_tol=1e-12):
             raise ValueError("relative_reduction must equal reduction_tokens / baseline tokens")
@@ -162,6 +160,12 @@ class BaselineComparison(Contract):
 
 
 class AgentVisibleResponse(Contract):
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=False,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
     serialization_format: Literal["utf-8-json"]
     serialized_content: str = Field(min_length=1)
     utf8_byte_count: int = Field(gt=0)
@@ -264,6 +268,12 @@ class RetrievalBenchmarkResult(Contract):
                 self.relative_reduction, expected_ratio, rel_tol=0, abs_tol=1e-12
             ):
                 raise ValueError("relative reduction must be calculated from the named baseline")
+            BaselineComparison(
+                baseline_id=self.baseline_id,
+                baseline_agent_visible_tokens=self.baseline_agent_visible_tokens,
+                reduction_tokens=self.reduction_tokens,
+                relative_reduction=self.relative_reduction,
+            )
         if self.coverage.complete_coverage_claimed and self.coverage.unsafe_inclusion_decision_ids:
             raise ValueError("complete coverage cannot coexist with unsafe inclusions")
         return self
