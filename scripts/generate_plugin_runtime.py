@@ -15,7 +15,7 @@ TARGET = ROOT / "plugins/context-library/generated/core_runtime.py"
 
 sys.path.insert(0, str(CORE_ROOT))
 
-from context_library_core.contracts import ContextPolicy  # noqa: E402
+from context_library_core.contracts import ApplicabilityRequest, ContextPolicy  # noqa: E402
 from context_library_core.version import VERSION  # noqa: E402
 
 
@@ -30,6 +30,12 @@ def expected() -> bytes:
         sort_dicts=True,
         width=120,
     )
+    applicability_schema = pprint.pformat(
+        ApplicabilityRequest.model_json_schema(by_alias=True),
+        compact=True,
+        sort_dicts=True,
+        width=120,
+    )
     header = (
         "# Generated from context_library_core.canonical; do not edit.\n"
         f"# source-version: {VERSION}\n# source-sha256: {digest}\n"
@@ -39,6 +45,7 @@ def expected() -> bytes:
 # Generated read-only contract metadata used by the self-contained Plugin.
 PRODUCT_VERSION = {VERSION!r}
 CONTEXT_POLICY_JSON_SCHEMA = {policy_schema}
+APPLICABILITY_REQUEST_JSON_SCHEMA = {applicability_schema}
 
 
 def validate_context_policy(payload: object) -> dict[str, object]:
@@ -69,6 +76,47 @@ def validate_context_policy(payload: object) -> dict[str, object]:
     ):
         raise ValueError("context policy affected_layers must map strings to strings")
     return payload
+
+
+def evaluate_applicability(payload: object) -> dict[str, object]:
+    """Evaluate the Core v1 repository-scope rule without write dependencies."""
+    if not isinstance(payload, dict) or payload.get("schema") != "context-library/applicability":
+        raise ValueError("unsupported applicability schema family")
+    if payload.get("schema_version") != 1:
+        raise ValueError("unsupported applicability schema version")
+    task = payload.get("task")
+    decision = payload.get("decision")
+    if not isinstance(task, dict) or not isinstance(decision, dict):
+        raise ValueError("applicability task and decision are required objects")
+    task_scopes = task.get("repository_scopes", [])
+    decision_scopes = decision.get("repository_scopes", [])
+    if not all(
+        isinstance(item, str)
+        and item
+        and not item.startswith("/")
+        and ".." not in item.split("/")
+        for item in (*task_scopes, *decision_scopes)
+    ):
+        raise ValueError("repository scopes must be safe relative paths")
+    if len(task_scopes) != len(set(task_scopes)) or len(decision_scopes) != len(set(decision_scopes)):
+        raise ValueError("repository scopes must be unique")
+    matched = sorted(set(task_scopes) & set(decision_scopes))
+    if not decision_scopes and decision.get("applies_when") is None:
+        state, reason = "unconditional", "none"
+    elif decision.get("applies_when") is not None:
+        state, reason = "undetermined", "conditional-unresolved"
+    elif not task_scopes:
+        state, reason = "undetermined", "missing-task-signal"
+    elif matched:
+        state, reason = "satisfied", "none"
+    else:
+        state, reason = "unsatisfied", "scope-mismatch"
+    return {{
+        "decision_id": decision.get("decision_id"),
+        "state": state,
+        "reason": reason,
+        "matched_selectors": {{"repository_scopes": matched}} if matched else {{}},
+    }}
 '''.encode()
     return header + source + generated_contracts
 

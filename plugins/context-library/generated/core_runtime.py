@@ -1,6 +1,6 @@
 # Generated from context_library_core.canonical; do not edit.
 # source-version: 0.3.4
-# source-sha256: a1458155977818a055868c4e1fbe747f3d6cdaf03a812eca7301c75ec12bc9a0
+# source-sha256: 93f6052f5387e09d3fa2ff40f62613ddc6fd5cdc85bd98bff4ed6ff639379b82
 from __future__ import annotations
 
 import dataclasses
@@ -388,6 +388,59 @@ CONTEXT_POLICY_JSON_SCHEMA = {'additionalProperties': False,
  'required': ['schema', 'schema_version', 'context_requirement'],
  'title': 'ContextPolicy',
  'type': 'object'}
+APPLICABILITY_REQUEST_JSON_SCHEMA = {'$defs': {'ApplicabilityDecision': {'additionalProperties': False,
+                                     'properties': {'applies_when': {'anyOf': [{'maxLength': 2000, 'type': 'string'},
+                                                                               {'type': 'null'}],
+                                                                     'default': None,
+                                                                     'title': 'Applies When'},
+                                                    'conflict_ids': {'items': {'type': 'string'},
+                                                                     'maxItems': 1000,
+                                                                     'title': 'Conflict Ids',
+                                                                     'type': 'array'},
+                                                    'decision_id': {'maxLength': 256,
+                                                                    'minLength': 1,
+                                                                    'title': 'Decision Id',
+                                                                    'type': 'string'},
+                                                    'effective_provenance': {'enum': ['explicit', 'inferred',
+                                                                                      'assumed'],
+                                                                             'title': 'Effective Provenance',
+                                                                             'type': 'string'},
+                                                    'provenance': {'enum': ['explicit', 'inferred', 'assumed'],
+                                                                   'title': 'Provenance',
+                                                                   'type': 'string'},
+                                                    'repository_scopes': {'items': {'type': 'string'},
+                                                                          'maxItems': 100,
+                                                                          'title': 'Repository Scopes',
+                                                                          'type': 'array'},
+                                                    'source_scope': {'maxLength': 512,
+                                                                     'minLength': 1,
+                                                                     'title': 'Source Scope',
+                                                                     'type': 'string'},
+                                                    'supersedes': {'items': {'type': 'string'},
+                                                                   'maxItems': 1000,
+                                                                   'title': 'Supersedes',
+                                                                   'type': 'array'}},
+                                     'required': ['decision_id', 'provenance', 'effective_provenance', 'source_scope'],
+                                     'title': 'ApplicabilityDecision',
+                                     'type': 'object'},
+           'ApplicabilityTask': {'additionalProperties': False,
+                                 'properties': {'repository_scopes': {'items': {'type': 'string'},
+                                                                      'maxItems': 100,
+                                                                      'title': 'Repository Scopes',
+                                                                      'type': 'array'}},
+                                 'title': 'ApplicabilityTask',
+                                 'type': 'object'}},
+ 'additionalProperties': False,
+ 'properties': {'decision': {'$ref': '#/$defs/ApplicabilityDecision'},
+                'schema': {'const': 'context-library/applicability',
+                           'default': 'context-library/applicability',
+                           'title': 'Schema',
+                           'type': 'string'},
+                'schema_version': {'const': 1, 'default': 1, 'title': 'Schema Version', 'type': 'integer'},
+                'task': {'$ref': '#/$defs/ApplicabilityTask'}},
+ 'required': ['task', 'decision'],
+ 'title': 'ApplicabilityRequest',
+ 'type': 'object'}
 
 
 def validate_context_policy(payload: object) -> dict[str, object]:
@@ -418,3 +471,44 @@ def validate_context_policy(payload: object) -> dict[str, object]:
     ):
         raise ValueError("context policy affected_layers must map strings to strings")
     return payload
+
+
+def evaluate_applicability(payload: object) -> dict[str, object]:
+    """Evaluate the Core v1 repository-scope rule without write dependencies."""
+    if not isinstance(payload, dict) or payload.get("schema") != "context-library/applicability":
+        raise ValueError("unsupported applicability schema family")
+    if payload.get("schema_version") != 1:
+        raise ValueError("unsupported applicability schema version")
+    task = payload.get("task")
+    decision = payload.get("decision")
+    if not isinstance(task, dict) or not isinstance(decision, dict):
+        raise ValueError("applicability task and decision are required objects")
+    task_scopes = task.get("repository_scopes", [])
+    decision_scopes = decision.get("repository_scopes", [])
+    if not all(
+        isinstance(item, str)
+        and item
+        and not item.startswith("/")
+        and ".." not in item.split("/")
+        for item in (*task_scopes, *decision_scopes)
+    ):
+        raise ValueError("repository scopes must be safe relative paths")
+    if len(task_scopes) != len(set(task_scopes)) or len(decision_scopes) != len(set(decision_scopes)):
+        raise ValueError("repository scopes must be unique")
+    matched = sorted(set(task_scopes) & set(decision_scopes))
+    if not decision_scopes and decision.get("applies_when") is None:
+        state, reason = "unconditional", "none"
+    elif decision.get("applies_when") is not None:
+        state, reason = "undetermined", "conditional-unresolved"
+    elif not task_scopes:
+        state, reason = "undetermined", "missing-task-signal"
+    elif matched:
+        state, reason = "satisfied", "none"
+    else:
+        state, reason = "unsatisfied", "scope-mismatch"
+    return {
+        "decision_id": decision.get("decision_id"),
+        "state": state,
+        "reason": reason,
+        "matched_selectors": {"repository_scopes": matched} if matched else {},
+    }

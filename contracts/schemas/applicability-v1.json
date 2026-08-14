@@ -1,0 +1,126 @@
+{
+  "$defs": {
+    "ApplicabilityDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_when": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applies When"
+        },
+        "conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Conflict Ids",
+          "type": "array"
+        },
+        "decision_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "effective_provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Effective Provenance",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "repository_scopes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Repository Scopes",
+          "type": "array"
+        },
+        "source_scope": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Source Scope",
+          "type": "string"
+        },
+        "supersedes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Supersedes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "decision_id",
+        "provenance",
+        "effective_provenance",
+        "source_scope"
+      ],
+      "title": "ApplicabilityDecision",
+      "type": "object"
+    },
+    "ApplicabilityTask": {
+      "additionalProperties": false,
+      "properties": {
+        "repository_scopes": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Repository Scopes",
+          "type": "array"
+        }
+      },
+      "title": "ApplicabilityTask",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "$ref": "#/$defs/ApplicabilityDecision"
+    },
+    "schema": {
+      "const": "context-library/applicability",
+      "default": "context-library/applicability",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task": {
+      "$ref": "#/$defs/ApplicabilityTask"
+    }
+  },
+  "required": [
+    "task",
+    "decision"
+  ],
+  "title": "ApplicabilityRequest",
+  "type": "object"
+}
