@@ -6,14 +6,16 @@ Dependency: #10 / RB-06 merged (`9ae2c71`)
 
 ## Decision
 
-The minimum authoritative vocabulary is:
+The minimum authoritative vocabulary justified by the current frozen corpus is:
 
-1. `repository_scopes`: normalized repository path or project scope;
-2. `operation`: normalized operation class supplied by the task; and
-3. `affected_layers`: explicit source-layer metadata already present in
-   canonical decisions and projection configuration.
+1. `repository_scopes`: normalized repository path or project scope.
 
-These selectors are conjunctive when present. A decision with no selector is
+`operation` and `affected_layers` were evaluated but are explicitly deferred:
+the current corpus does not isolate either signal from scope or lexical
+effects. They remain candidates for a future benchmark revision, not
+authoritative selectors in AP-02.
+
+The accepted selector is conjunctive with any future accepted selectors. A decision with no selector is
 unconditional. A selector is `satisfied` only when the task supplies a matching
 value; it is `unsatisfied` on an explicit mismatch and `undetermined` when the
 task lacks the required signal. Undetermined guidance remains visible as
@@ -27,8 +29,8 @@ they cannot establish applicability or authority.
 | Selector | Required evidence | Simpler alternative | Result |
 | --- | --- | --- | --- |
 | repository scope/path | `synthetic-global-scoped`, `synthetic-no-applicable-context` | global-only matching | Accepted: distinguishes project-local from unrelated guidance. |
-| operation | `synthetic-lexical-synonym`, `synthetic-plausible-distractor` | task-summary substring | Accepted: separates an operation mismatch when wording differs. |
-| affected layer | `synthetic-global-scoped` | repository scope alone | Accepted: preserves global guidance while routing component-specific guidance. |
+| operation | no current RB-02 case isolates operation with scope held constant | task-summary substring | Deferred: no evidence; do not make authoritative. |
+| affected layer | no current RB-02 case carries independent affected-layer metadata | repository scope alone | Deferred: no evidence; do not make authoritative. |
 | environment | no current RB-02 case requires a distinct environment value | add a free-text environment field | Rejected for AP-01: no declared safety improvement; reserve for a benchmark case. |
 | lifecycle phase | no current RB-02 case requires phase resolution | infer phase from prose | Rejected: no evidence and unsafe inference. |
 | artifact type | no current RB-02 case requires artifact-type resolution | substring matching | Rejected: no evidence and duplicates operation/path signals. |
@@ -40,7 +42,7 @@ resolved. Supersession, conflict, and exclusion remain separate gold/safety
 dimensions; no selector may override those authority rules. Re-running the
 RB-06 baseline matrix with these semantics produces no change to existing
 gold classifications because the accepted selectors are already represented
-by the task's explicit scope/operation signals; any future reclassification
+by the task's explicit scope signal; any future reclassification
 must create a new gold revision and rerun RB-06.
 
 ## Contract proposal for AP-02
@@ -52,8 +54,8 @@ decision:
 {
   "schema_version": 1,
   "state": "unconditional | satisfied | unsatisfied | undetermined",
-  "matched_selectors": {"repository_scope": "src/example"},
-  "required_selectors": ["operation", "affected_layer"],
+  "matched_selectors": {"repository_scopes": ["src/example"]},
+  "required_selectors": ["repository_scopes"],
   "reason": "missing-task-signal"
 }
 ```
