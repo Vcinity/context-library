@@ -1,6 +1,6 @@
 # Generated from context_library_core.canonical; do not edit.
 # source-version: 0.3.4
-# source-sha256: ac71391e72361518ed35370ead10d576a26d00d38b4df6d81242f06ef4c22dd8
+# source-sha256: 3a3a89a35cfc36d700081aaaaf673ed551176ccdee71b60ea9a9b5691cd9ec34
 from __future__ import annotations
 
 import dataclasses

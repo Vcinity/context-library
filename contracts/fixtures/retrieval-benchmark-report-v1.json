@@ -1,0 +1,82 @@
+{
+  "schema": "context-library/retrieval-benchmark-report",
+  "schema_version": 1,
+  "report_id": "report-synthetic-interface-r1",
+  "task_id": "synthetic-interface-change",
+  "task_revision": "task-r1",
+  "gold_revision": "gold-r1",
+  "gold_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "corpus_revision": "synthetic-corpus-r1",
+  "tokenizer": {
+    "pinned": true,
+    "name": "synthetic-reference-tokenizer",
+    "version": "1.0.0",
+    "vocabulary_revision": "vocab-r1",
+    "accounting_method": "UTF-8 JSON token IDs from synthetic reference tokenizer"
+  },
+  "results": [
+    {
+      "baseline_id": "full-register-v1",
+      "mechanism_id": "full-register",
+      "coverage": {
+        "basis": "task-signal",
+        "operative_expected": 1,
+        "operative_recalled": 1,
+        "missing_operative_decision_ids": [],
+        "unsafe_inclusion_decision_ids": [],
+        "missed_conflict_ids": [],
+        "detected_conflict_ids": ["conflict-interface"],
+        "complete_coverage_possible": true,
+        "complete_coverage_claimed": true,
+        "truncated": false,
+        "truncation_reason": "none"
+      },
+      "agent_visible_response": {
+        "serialization_format": "utf-8-json",
+        "serialized_content": "{\"decisions\":[\"decision-current-interface\"]}",
+        "utf8_byte_count": 44,
+        "sha256": "8dcafc65633f59b053437ca4dbefa2e8333364e892a8fecee7e9bfef5f0eb86d"
+      },
+      "agent_visible_tokens": 24,
+      "repeated_token_count": 4,
+      "repeated_token_definition": "sum-token-occurrences-after-first-per-token",
+      "agent_directed_tool_calls": 1
+    },
+    {
+      "baseline_id": "lexical-baseline-v1",
+      "mechanism_id": "lexical-baseline",
+      "coverage": {
+        "basis": "task-signal",
+        "operative_expected": 1,
+        "operative_recalled": 1,
+        "missing_operative_decision_ids": [],
+        "unsafe_inclusion_decision_ids": [],
+        "missed_conflict_ids": [],
+        "detected_conflict_ids": ["conflict-interface"],
+        "complete_coverage_possible": true,
+        "complete_coverage_claimed": true,
+        "truncated": false,
+        "truncation_reason": "none"
+      },
+      "agent_visible_response": {
+        "serialization_format": "utf-8-json",
+        "serialized_content": "{\"decisions\":[\"decision-current-interface\"]}",
+        "utf8_byte_count": 44,
+        "sha256": "8dcafc65633f59b053437ca4dbefa2e8333364e892a8fecee7e9bfef5f0eb86d"
+      },
+      "agent_visible_tokens": 12,
+      "repeated_token_count": 2,
+      "repeated_token_definition": "sum-token-occurrences-after-first-per-token",
+      "agent_directed_tool_calls": 1,
+      "baseline_reference": "full-register-v1",
+      "baseline_agent_visible_tokens": 24,
+      "reduction_tokens": 12,
+      "relative_reduction": 0.5
+    }
+  ],
+  "secondary_resources": {
+    "latency_ms": 1.5,
+    "filesystem_reads": 2,
+    "index_bytes": 1024
+  }
+}

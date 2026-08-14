@@ -1,0 +1,36 @@
+{
+  "schema": "context-library/retrieval-benchmark-gold",
+  "schema_version": 1,
+  "task_id": "synthetic-interface-change",
+  "task_revision": "task-r1",
+  "gold_revision": "gold-r1",
+  "gold_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "labels": [
+    {
+      "decision_id": "decision-current-interface",
+      "classification": "operative",
+      "conflict_ids": ["conflict-interface"]
+    },
+    {
+      "decision_id": "decision-scope-review",
+      "classification": "judgment-required"
+    },
+    {
+      "decision_id": "decision-old-interface",
+      "classification": "excluded",
+      "exclusion_reason": "superseded",
+      "conflict_ids": ["conflict-interface"]
+    },
+    {
+      "decision_id": "decision-outside-repo",
+      "classification": "excluded",
+      "exclusion_reason": "out-of-scope"
+    }
+  ],
+  "conflicts": [
+    {
+      "conflict_id": "conflict-interface",
+      "member_decision_ids": ["decision-current-interface", "decision-old-interface"]
+    }
+  ]
+}

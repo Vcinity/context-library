@@ -1,0 +1,9 @@
+{
+  "schema": "context-library/retrieval-benchmark-gold",
+  "schema_version": 2,
+  "task_id": "synthetic-interface-change",
+  "task_revision": "task-r1",
+  "gold_revision": "gold-r2",
+  "gold_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "labels": []
+}
