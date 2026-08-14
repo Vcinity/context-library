@@ -1,7 +1,7 @@
 # Specification checkpoint: #3 / reviewed publication authorization
 
-Status: specification-only checkpoint  
-Originating issue: #3 — Separate reviewed publication authorization from automatic publication  
+Status: specification-only checkpoint
+Originating issue: #3 — Separate reviewed publication authorization from automatic publication
 Dependencies: #1 multi-project Manager support, merged; current Maintainer and Manager publication paths
 
 ## Scope and non-goals
