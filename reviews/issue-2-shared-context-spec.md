@@ -64,8 +64,10 @@ No canonical data is committed. Tests use temporary synthetic pack trees.
 
 The principal slice is:
 
-    explicit relationship fixture -> Core effective view -> Maintainer query
-      -> Manager read/audit -> generated Plugin read/projection
+```text
+explicit relationship fixture -> Core effective view -> Maintainer query
+  -> Manager read/audit -> generated Plugin read/projection
+```
 
 Positive cases cover one parent, multiple ordered parents, and standalone
 legacy packs. Negative cases cover missing required parent, cycle, duplicate
