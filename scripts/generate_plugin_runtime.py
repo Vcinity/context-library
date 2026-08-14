@@ -116,6 +116,12 @@ def evaluate_applicability(payload: object) -> dict[str, object]:
         "state": state,
         "reason": reason,
         "matched_selectors": {{"repository_scopes": matched}} if matched else {{}},
+        "required_selectors": ["repository_scopes"] if decision_scopes else [],
+        "provenance": decision.get("provenance"),
+        "effective_provenance": decision.get("effective_provenance"),
+        "source_scope": decision.get("source_scope"),
+        "supersedes": decision.get("supersedes", []),
+        "conflict_ids": decision.get("conflict_ids", []),
     }}
 '''.encode()
     return header + source + generated_contracts
