@@ -53,11 +53,12 @@ fixtures support it. Preserve the canonical-data read-only boundary.
 
 ## Affected artifacts and commands
 
-- `scripts/run_retrieval_benchmark.py`, a new Issue-18-only task-context adapter
-  or benchmark entry point, and benchmark report fixtures;
-- frozen `benchmark_runner.py`, `retrieval_baselines.py`, and target fixtures
-  remain unchanged; the adapter composes with them without changing baseline
-  definitions or thresholds;
+- a new Issue-18-only task-context adapter or benchmark entry point and
+  benchmark report fixtures;
+- `scripts/run_retrieval_benchmark.py`, `benchmark_runner.py`,
+  `retrieval_baselines.py`, and target fixtures remain unchanged and are only
+  invoked/composed with by the adapter; baseline definitions and thresholds
+  cannot change;
 - `contracts/fixtures/` and generated schemas only if a validation gap is
   discovered (no gold-label changes);
 - focused retrieval, safety, Plugin, and cross-component tests; and
