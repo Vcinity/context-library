@@ -27,12 +27,17 @@ supersession, and conflict metadata. A parity harness submits the same
 - the Core evaluator;
 - a Maintainer query/read adapter;
 - the Manager read serialization boundary; and
-- generated Plugin runtime validation/evaluation.
+- generated Plugin runtime validation/evaluation from
+  `scripts/generate_plugin_runtime.py`.
 
 The harness compares canonical JSON result fields, not private object identity.
 Every adapter must preserve `decision_id`, state, reason, matched selectors,
 required selectors, provenance, source scope, supersession, and conflict IDs.
 Any divergence fails the test and identifies the adapter and field.
+Extending the existing generated Plugin evaluator template to emit these
+already-defined AP-02 fields is explicitly in scope. This is completion of the
+generated field surface, not a new selector or applicability semantic, so it
+does not broaden the AP-01 vocabulary or require a new benchmark review.
 
 Plugin projection checks use the same fixture to assert that only
 `unconditional` and `satisfied` explicit guidance is eligible for operative
@@ -52,6 +57,7 @@ no new failure class; it does not retune frozen efficiency targets.
 
 - shared fixture and parity harness under `tests/integration/`;
 - Maintainer/Manager read adapter calls to Core applicability;
+- `scripts/generate_plugin_runtime.py` and its generated runtime field surface;
 - generated Plugin runtime drift and parity checks;
 - `contracts/README.md` stable applicability documentation; and
 - benchmark report evidence at all committed scales.
