@@ -1,0 +1,313 @@
+{
+  "$defs": {
+    "ApplicabilityState": {
+      "enum": [
+        "unconditional",
+        "satisfied",
+        "unsatisfied",
+        "undetermined"
+      ],
+      "title": "ApplicabilityState",
+      "type": "string"
+    },
+    "CapsuleAccounting": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_status": {
+          "enum": [
+            "verified",
+            "unverified"
+          ],
+          "title": "Budget Status",
+          "type": "string"
+        },
+        "serialized_content": {
+          "title": "Serialized Content",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "token_count": {
+          "minimum": 0,
+          "title": "Token Count",
+          "type": "integer"
+        },
+        "tokenizer": {
+          "$ref": "#/$defs/TokenizerIdentity"
+        },
+        "utf8_byte_count": {
+          "minimum": 0,
+          "title": "Utf8 Byte Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "serialized_content",
+        "utf8_byte_count",
+        "sha256",
+        "token_count",
+        "tokenizer",
+        "budget_status"
+      ],
+      "title": "CapsuleAccounting",
+      "type": "object"
+    },
+    "TaskContextCoverage": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_status": {
+          "enum": [
+            "verified",
+            "unverified"
+          ],
+          "title": "Budget Status",
+          "type": "string"
+        },
+        "complete": {
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "omitted_operative_decision_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Omitted Operative Decision Ids",
+          "type": "array"
+        },
+        "operative_expected": {
+          "minimum": 0,
+          "title": "Operative Expected",
+          "type": "integer"
+        },
+        "operative_included": {
+          "minimum": 0,
+          "title": "Operative Included",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operative_expected",
+        "operative_included",
+        "complete",
+        "budget_status"
+      ],
+      "title": "TaskContextCoverage",
+      "type": "object"
+    },
+    "TaskContextItem": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflict Ids",
+          "type": "array"
+        },
+        "decision_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "effective_provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Effective Provenance",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "source_scope": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Source Scope",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/ApplicabilityState"
+        },
+        "supersedes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supersedes",
+          "type": "array"
+        },
+        "text": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id",
+        "text",
+        "state",
+        "provenance",
+        "effective_provenance",
+        "source_scope"
+      ],
+      "title": "TaskContextItem",
+      "type": "object"
+    },
+    "TaskContextTruncation": {
+      "additionalProperties": false,
+      "properties": {
+        "omitted_operative_decision_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Omitted Operative Decision Ids",
+          "type": "array"
+        },
+        "reason": {
+          "default": "none",
+          "enum": [
+            "none",
+            "token-budget"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "truncated"
+      ],
+      "title": "TaskContextTruncation",
+      "type": "object"
+    },
+    "TokenizerIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_method": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Accounting Method",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pinned": {
+          "const": true,
+          "default": true,
+          "title": "Pinned",
+          "type": "boolean"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "vocabulary_revision": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Vocabulary Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "vocabulary_revision",
+        "accounting_method"
+      ],
+      "title": "TokenizerIdentity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agent_visible_capsule": {
+      "$ref": "#/$defs/CapsuleAccounting"
+    },
+    "applicability_uncertainties": {
+      "items": {
+        "$ref": "#/$defs/TaskContextItem"
+      },
+      "title": "Applicability Uncertainties",
+      "type": "array"
+    },
+    "applicable_conflicts": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Applicable Conflicts",
+      "type": "array"
+    },
+    "coverage": {
+      "$ref": "#/$defs/TaskContextCoverage"
+    },
+    "non_operative_directives": {
+      "items": {
+        "$ref": "#/$defs/TaskContextItem"
+      },
+      "title": "Non Operative Directives",
+      "type": "array"
+    },
+    "operative_directives": {
+      "items": {
+        "$ref": "#/$defs/TaskContextItem"
+      },
+      "title": "Operative Directives",
+      "type": "array"
+    },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "revision": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Revision",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/task-context-response",
+      "default": "context-library/task-context-response",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "truncation": {
+      "$ref": "#/$defs/TaskContextTruncation"
+    }
+  },
+  "required": [
+    "project",
+    "revision",
+    "coverage",
+    "truncation",
+    "agent_visible_capsule"
+  ],
+  "title": "TaskContextResponse",
+  "type": "object"
+}

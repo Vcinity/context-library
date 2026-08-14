@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "TokenizerIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_method": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Accounting Method",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pinned": {
+          "const": true,
+          "default": true,
+          "title": "Pinned",
+          "type": "boolean"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "vocabulary_revision": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Vocabulary Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "vocabulary_revision",
+        "accounting_method"
+      ],
+      "title": "TokenizerIdentity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agent_token_budget": {
+      "minimum": 0,
+      "title": "Agent Token Budget",
+      "type": "integer"
+    },
+    "operation": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Operation",
+      "type": "string"
+    },
+    "project": {
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "title": "Project",
+      "type": "string"
+    },
+    "repository_scopes": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Repository Scopes",
+      "type": "array"
+    },
+    "schema": {
+      "const": "context-library/task-context-request",
+      "default": "context-library/task-context-request",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_summary": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Task Summary",
+      "type": "string"
+    },
+    "tokenizer": {
+      "$ref": "#/$defs/TokenizerIdentity"
+    }
+  },
+  "required": [
+    "project",
+    "task_summary",
+    "operation",
+    "repository_scopes",
+    "agent_token_budget",
+    "tokenizer"
+  ],
+  "title": "TaskContextRequest",
+  "type": "object"
+}
