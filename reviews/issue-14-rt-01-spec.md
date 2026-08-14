@@ -82,10 +82,25 @@ truthful complete/incomplete/truncated coverage, and failure when a mutation
 silently removes an operative directive. Validation remains offline and uses
 synthetic repositories only.
 
+Concrete validation commands are `PYTHONPATH=src poetry run pytest -q
+tests/contracts/test_task_context.py`, `PYTHONPATH=src make contracts-check`,
+`PYTHONPATH=src poetry run ruff check src tests scripts`, and `git diff --check`.
+The CLI/file test is the primary black-box boundary; generated schemas are
+checked for drift separately.
+
 ## Compatibility, risks, and review boundary
 
 The new families are additive and unsupported versions fail closed. Existing
 AP-02/AP-03 behavior is consumed, not redefined. The renderer cannot promise
 universal model optimality; it reports the named tokenizer and exact visible
-text. This immutable checkpoint contains no implementation and requires fresh
+text. The full audit record is reconstructable from stable decision IDs,
+revision, source, and machine-readable fields in this response; on-demand
+serving of that record is deferred to the later Plugin MCP issue.
+
+Unresolved questions for implementation are whether the later MCP audit tool
+should return one decision or the complete response envelope, and which
+additional tokenizer identities (if any) should be pinned in a future contract
+revision. Neither question changes version 1 semantics.
+
+This immutable checkpoint contains no implementation and requires fresh
 independent read-only review before autonomous approval.
