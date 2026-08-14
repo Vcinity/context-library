@@ -1,7 +1,7 @@
 # Specification checkpoint: #4 / 30-day production autonomy evidence
 
-Status: specification-only checkpoint  
-Originating issue: #4 — Establish complete 30-day production autonomy evidence  
+Status: specification-only checkpoint
+Originating issue: #4 — Establish complete 30-day production autonomy evidence
 Authority: SPEC.md §11.5 and the existing Manager telemetry/event lineage implementation
 
 ## Scope and non-goals
