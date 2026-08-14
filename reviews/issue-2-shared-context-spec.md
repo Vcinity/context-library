@@ -47,6 +47,9 @@ byte-equivalent. A missing required parent, cycle, duplicate edge, or
 ambiguous relationship fails closed. Legacy packs with no artifact remain
 standalone.
 
+The `required` field defaults to `true` when omitted; `order` defaults to
+zero. Both defaults are deterministic and fail closed for malformed values.
+
 The resolver returns a read-only effective view. Each decision carries its
 owning project, source pack identity/digest, provenance, derivation,
 supersession references, and original decision ID. It never rewrites a source
@@ -82,13 +85,15 @@ explicit relationship fixture -> Core effective view -> Maintainer query
   read/projection
 ```
 
-Positive cases cover one parent, multiple ordered parents, and standalone
-legacy packs. Negative cases cover missing required parent, cycle, duplicate
-identity, ambiguous graph, conflicting inherited decisions, supersession, and
-provenance preservation. Assertions compare observable decision IDs, source
-scope, status, conflict visibility, and non-mutating Plugin output across all
-consumers. A mutation test proves that filesystem adjacency alone does not
-create inheritance.
+Positive cases cover one parent, multiple ordered parents, standalone legacy
+packs, and two parents sharing a common grandparent (a diamond graph) with a
+single deduplicated entry. Negative cases cover missing required parent,
+unauthorized parent (child absent from `shared_context_consumers`), cycle,
+duplicate identity, ambiguous graph, conflicting inherited decisions,
+supersession, and provenance preservation. Assertions compare observable
+decision IDs, source scope, status, conflict visibility, and non-mutating
+Plugin output across all consumers. A mutation test proves that filesystem
+adjacency alone does not create inheritance.
 
 ## Compatibility, safety, and unresolved questions
 
@@ -98,8 +103,9 @@ views must not be cached across relationship or source-digest revisions.
 Provider-backed evaluation is out of scope. The downstream retrieval roadmap
 must consume this contract rather than inventing cross-scope precedence. Open
 risks to validate during implementation are resolver cost for deep graphs and
-consistency when a parent revision changes during a read; the implementation
-must bind one source-digest snapshot per effective-view request and report
+consistency when a parent revision or authorization allow-list changes during
+a read; the implementation must bind one consistent source-digest and
+authorization-state snapshot per effective-view request and report
 bounded-resource failures explicitly.
 
 Before implementation, independent review must confirm graph semantics,
