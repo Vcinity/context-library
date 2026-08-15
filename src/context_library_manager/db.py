@@ -250,6 +250,7 @@ class Store:
             and event_type
             in {
                 "review-resolved",
+                "publication-authorized",
                 "human-review",
                 "human-approval",
                 "human-resolution",

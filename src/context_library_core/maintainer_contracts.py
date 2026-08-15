@@ -356,6 +356,40 @@ class AuthorityPolicy(StrictModel):
     category_owners: dict[str, str] = Field(default_factory=dict)
 
 
+class PublicationAuthorization(StrictModel):
+    """Manager-issued, exact-scope authorization for one publication attempt."""
+
+    schema_id: Literal["context-library/publication-authorization"] = Field(
+        default="context-library/publication-authorization", alias="schema"
+    )
+    schema_version: Literal[1] = 1
+    authorization_id: str = Field(min_length=1, max_length=256)
+    project: str = Field(min_length=1, max_length=256)
+    candidate_ids: list[str] = Field(min_length=1, max_length=1000)
+    candidate_digests: dict[str, str] = Field(min_length=1, max_length=1000)
+    review_id: str = Field(min_length=1, max_length=256)
+    review_revision: str = Field(min_length=1, max_length=256)
+    actor: str = Field(min_length=1, max_length=512)
+    capability: Literal["publication:authorize"] = "publication:authorize"
+    policy_revision: str = Field(min_length=1, max_length=256)
+    idempotency_key: str = Field(min_length=1, max_length=256)
+    replay_identity: str = Field(min_length=1, max_length=256)
+    issued_at: datetime
+    expires_at: datetime
+
+    @model_validator(mode="after")
+    def exact_candidate_map(self) -> "PublicationAuthorization":
+        if self.issued_at.tzinfo is None or self.expires_at.tzinfo is None:
+            raise ValueError("publication authorization timestamps require timezone information")
+        if len(set(self.candidate_ids)) != len(self.candidate_ids):
+            raise ValueError("candidate_ids must be unique")
+        if set(self.candidate_digests) != set(self.candidate_ids):
+            raise ValueError("candidate_digests must exactly match candidate_ids")
+        if self.expires_at <= self.issued_at:
+            raise ValueError("publication authorization must expire after issuance")
+        return self
+
+
 class Response(StrictModel):
     schema_id: Literal["context-library/maintainer-command"] = Field(
         default="context-library/maintainer-command", alias="schema"
