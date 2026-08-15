@@ -11,7 +11,7 @@ import secrets
 import threading
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Annotated
 from urllib.parse import parse_qs, urlencode
@@ -21,10 +21,10 @@ from urllib.request import urlopen
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from context_library_core.maintainer_contracts import HarvestBatch
+from context_library_core.maintainer_contracts import Candidate, HarvestBatch, PublicationAuthorization, digest
 
 from .agent_service import (
     ServiceConflict,
@@ -69,7 +69,7 @@ from .contracts import (
     ProposalSubmission,
     SessionProjectSelection,
 )
-from .db import Store
+from .db import ProjectLifecycleConflict, Store
 from .domain import (
     Contribution,
     Envelope,
@@ -84,6 +84,13 @@ from .routing import route
 from .service import SourceIdempotencyConflict, intake_harvest_batch, intake_source
 from .web import ROOT as WEB_ROOT
 from .web import render as render_template
+
+
+class ProjectLifecycleControl(BaseModel):
+    lifecycle: str = Field(min_length=1, max_length=32)
+    expected_version: int = Field(ge=1)
+    reason: str = Field(min_length=1, max_length=2000)
+    idempotency_key: str = Field(min_length=1, max_length=256)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -112,44 +119,81 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return wrapped
 
     now = utc_now()
-    app.state.store.db.execute(
-        "INSERT INTO projects(id,name,created_at,updated_at) VALUES(?,?,?,?) "
-        "ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at",
-        (settings.project, settings.project, now, now),
-    )
-    app.state.store.db.execute(
-        "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
-        "ON CONFLICT(id) DO NOTHING",
-        (
-            f"policy_{settings.project}_1",
-            settings.project,
-            "1",
-            json.dumps({"excluded_categories": settings.excluded_categories}),
-            now,
-        ),
-    )
+    managed = list(settings.managed_projects)
+    configured_ids = {entry.id for entry in managed}
+    existing_projects = {
+        row["id"]: row
+        for row in app.state.store.db.execute("SELECT id,active,lifecycle FROM projects").fetchall()
+    }
+    for removed_id, row in existing_projects.items():
+        if removed_id in configured_ids or (not row["active"] and row["lifecycle"] == "disabled"):
+            continue
+        app.state.store.db.execute(
+            "UPDATE projects SET active=0,lifecycle='disabled',lifecycle_version=lifecycle_version+1,"
+            "updated_at=? WHERE id=?",
+            (now, removed_id),
+        )
+        app.state.store.event(
+            None,
+            "runtime:configuration",
+            "project-removed",
+            {"project": removed_id, "reason": "removed from managed_projects"},
+            removed_id,
+        )
+    for entry in managed:
+        app.state.store.db.execute(
+            "INSERT INTO projects(id,name,created_at,updated_at,active,lifecycle) VALUES(?,?,?,?,?,?) "
+            "ON CONFLICT(id) DO UPDATE SET active=excluded.active,"
+            "lifecycle=CASE WHEN excluded.active=0 THEN 'disabled' ELSE projects.lifecycle END,"
+            "updated_at=excluded.updated_at",
+            (entry.id, entry.id, now, now, int(entry.enabled), "enabled" if entry.enabled else "disabled"),
+        )
+        if settings.explicit_project_registry and entry.id not in existing_projects:
+            app.state.store.event(
+                None,
+                "runtime:configuration",
+                "project-enrolled",
+                {
+                    "project": entry.id,
+                    "library_root": str(entry.library_root),
+                    "state_namespace": entry.state_namespace,
+                },
+                entry.id,
+            )
+        app.state.store.db.execute(
+            "INSERT INTO policy_revisions(id,project,revision,payload,created_at) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(id) DO NOTHING",
+            (
+                f"policy_{entry.id}_1",
+                entry.id,
+                "1",
+                json.dumps({"excluded_categories": settings.excluded_categories}),
+                now,
+            ),
+        )
     app.state.store.db.commit()
     from .telemetry import DEFAULT_PRODUCERS, append_event, install_manifest
 
-    install_manifest(
-        app.state.store,
-        settings.project,
-        f"{VERSION}:default-producers-v1",
-        DEFAULT_PRODUCERS,
-        effective_at=now,
-    )
-    current_policy = app.state.store.db.execute(
-        "SELECT revision FROM policy_revisions WHERE project=? "
-        "ORDER BY CAST(revision AS INTEGER) DESC,created_at DESC LIMIT 1",
-        (settings.project,),
-    ).fetchone()
-    append_event(
-        app.state.store,
-        settings.project,
-        "policy",
-        "policy-snapshot",
-        payload={"revision": current_policy["revision"] if current_policy else "1"},
-    )
+    for entry in managed:
+        install_manifest(
+            app.state.store,
+            entry.id,
+            f"{VERSION}:default-producers-v1",
+            DEFAULT_PRODUCERS,
+            effective_at=now,
+        )
+        current_policy = app.state.store.db.execute(
+            "SELECT revision FROM policy_revisions WHERE project=? "
+            "ORDER BY CAST(revision AS INTEGER) DESC,created_at DESC LIMIT 1",
+            (entry.id,),
+        ).fetchone()
+        append_event(
+            app.state.store,
+            entry.id,
+            "policy",
+            "policy-snapshot",
+            payload={"revision": current_policy["revision"] if current_policy else "1"},
+        )
     rate_windows: dict[tuple[str, str], deque[float]] = defaultdict(deque)
 
     def secure(response):
@@ -378,6 +422,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     def project_allowed(request: Request, project: str) -> bool:
         principal = request.state.principal
+        if settings.explicit_project_registry and project not in settings.managed_project_ids:
+            return False
         configured = app.state.store.db.execute("SELECT 1 FROM projects WHERE id=? AND active=1", (project,)).fetchone()
         return bool(principal and configured and principal.allows(Capability.READ, project))
 
@@ -723,12 +769,62 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         payload["human_resolution_rationale"] = resolution.rationale
         payload["human_resolver"] = actor
         if resolution.choice == "adopt-candidate" and payload.get("publication_intent"):
+            current_policy = app.state.store.db.execute(
+                "SELECT revision FROM policy_revisions WHERE project=? "
+                "ORDER BY CAST(revision AS INTEGER) DESC,created_at DESC LIMIT 1",
+                (project,),
+            ).fetchone()
+            if current_policy and str(payload.get("policy_revision", "1")) != str(current_policy["revision"]):
+                raise HTTPException(
+                    409,
+                    {
+                        "code": "stale-publication-authorization",
+                        "message": "project policy changed; the review must be re-evaluated",
+                    },
+                )
             payload["authorized_publication"] = True
+            candidate_payload = payload.get("clm_payload")
+            if isinstance(candidate_payload, dict) and candidate_payload.get("candidate_id"):
+                candidate = Candidate.model_validate(candidate_payload)
+                issued_at = datetime.now(timezone.utc).replace(microsecond=0)
+                review_revision = app.state.store.digest(
+                    {
+                        "review_id": review_row["id"],
+                        "resolution": resolution.model_dump(mode="json"),
+                    }
+                )
+                authorization_id = "publication_auth_" + app.state.store.digest(
+                    [project, review_row["id"], actor, resolution.idempotency_key]
+                )[:24]
+                envelope = PublicationAuthorization(
+                    authorization_id=authorization_id,
+                    project=project,
+                    candidate_ids=[candidate.candidate_id],
+                    candidate_digests={
+                        candidate.candidate_id: digest(candidate.model_dump(mode="json", by_alias=True))
+                    },
+                    review_id=review_row["id"],
+                    review_revision=review_revision,
+                    actor=actor,
+                    policy_revision=str(payload.get("policy_revision", "1")),
+                    idempotency_key=resolution.idempotency_key,
+                    replay_identity=authorization_id,
+                    issued_at=issued_at,
+                    expires_at=issued_at + timedelta(minutes=15),
+                )
+                payload["publication_authorization"] = envelope.model_dump(mode="json", by_alias=True)
             app.state.store.event(
                 review_row["work_id"],
                 actor,
                 "publication-authorized",
-                {"review_id": review_row["id"], "capability": Capability.ADMIN.value},
+                {
+                    "review_id": review_row["id"],
+                    "capability": Capability.ADMIN.value,
+                    "publication_capability": "publication:authorize",
+                    "authorization_id": payload.get("publication_authorization", {}).get("authorization_id"),
+                    "candidate_ids": payload.get("publication_authorization", {}).get("candidate_ids", []),
+                    "policy_revision": payload.get("policy_revision"),
+                },
                 project,
             )
         app.state.store.db.execute(
@@ -963,6 +1059,78 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         require_project(request, project)
         require_capability(request, Capability.READ, project)
         return envelope(request, data=runtime_health_data(project))
+
+    @app.get("/api/v1/projects/{project}/lifecycle")
+    def project_lifecycle(project: str, request: Request):
+        if settings.explicit_project_registry and project not in {
+            entry.id for entry in settings.managed_projects
+        }:
+            raise HTTPException(404, {"code": "project-not-found", "message": "project not configured"})
+        require_capability(request, Capability.READ, project)
+        row = app.state.store.project_lifecycle(project)
+        if not row:
+            raise HTTPException(404, {"code": "project-not-found", "message": "project not configured"})
+        return envelope(request, data=dict(row))
+
+    @app.post("/api/v1/projects/{project}/lifecycle")
+    @serialized_store_write
+    def transition_project_lifecycle(project: str, body: ProjectLifecycleControl, request: Request):
+        if settings.explicit_project_registry and project not in {
+            entry.id for entry in settings.managed_projects
+        }:
+            raise HTTPException(404, {"code": "project-not-found", "message": "project not configured"})
+        require_csrf(request)
+        require_capability(request, Capability.ADMIN, project)
+        actor = actor_for(request)
+        route_name = f"POST:/api/v1/projects/{project}/lifecycle"
+        digest = app.state.store.digest(body.model_dump(mode="json"))
+        existing = app.state.store.db.execute(
+            "SELECT request_digest,response_status,response FROM idempotency_records "
+            "WHERE actor=? AND project=? AND route=? AND idempotency_key=?",
+            (actor, project, route_name, body.idempotency_key),
+        ).fetchone()
+        if existing:
+            if existing["request_digest"] != digest:
+                raise HTTPException(409, {"code": "idempotency-conflict", "message": "idempotency key was reused"})
+            return JSONResponse(json.loads(existing["response"]), status_code=existing["response_status"])
+        try:
+            result = app.state.store.transition_project_lifecycle(
+                project,
+                body.lifecycle,
+                body.expected_version,
+                actor,
+                body.reason,
+            )
+        except ProjectLifecycleConflict as exc:
+            raise HTTPException(
+                409,
+                {
+                    "code": "project-lifecycle-conflict",
+                    "message": "project lifecycle version is stale",
+                    "current_lifecycle": exc.current.get("lifecycle"),
+                    "current_version": exc.current.get("lifecycle_version"),
+                },
+            ) from exc
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(409, {"code": "invalid-project-lifecycle", "message": str(exc)}) from exc
+        response = envelope(request, data=result)
+        app.state.store.db.execute(
+            "INSERT INTO idempotency_records(id,actor,project,route,idempotency_key,request_digest,"
+            "response_status,response,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+            (
+                "idem_" + app.state.store.digest([actor, project, route_name, body.idempotency_key])[:24],
+                actor,
+                project,
+                route_name,
+                body.idempotency_key,
+                digest,
+                200,
+                json.dumps(response),
+                utc_now(),
+            ),
+        )
+        app.state.store.db.commit()
+        return JSONResponse(response)
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon():
@@ -2605,6 +2773,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "initial_overview": json.dumps(metrics, separators=(",", ":")),
             },
         )
+
+    @app.get("/api/v1/projects/{project}/autonomy/evidence")
+    def autonomy_evidence(project: str, request: Request):
+        require_project(request, project)
+        from .telemetry import production_evidence_bundle
+
+        bundle = production_evidence_bundle(app.state.store, project, window_days=30, production=True)
+        return envelope(request, data=bundle)
 
     def page_context(request: Request, title: str, project: str | None = None) -> dict:
         principal = request.state.principal

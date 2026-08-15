@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "ConflictReference": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Conflict Id",
+          "type": "string"
+        },
+        "member_decision_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 2,
+          "title": "Member Decision Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "conflict_id",
+        "member_decision_ids"
+      ],
+      "title": "ConflictReference",
+      "type": "object"
+    },
+    "ExclusionReason": {
+      "enum": [
+        "non-authoritative",
+        "superseded",
+        "out-of-scope",
+        "inapplicable",
+        "duplicate",
+        "other-reviewed"
+      ],
+      "title": "ExclusionReason",
+      "type": "string"
+    },
+    "GoldDecisionLabel": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "$ref": "#/$defs/RetrievalClassification"
+        },
+        "conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Conflict Ids",
+          "type": "array"
+        },
+        "decision_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "exclusion_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExclusionReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "decision_id",
+        "classification"
+      ],
+      "title": "GoldDecisionLabel",
+      "type": "object"
+    },
+    "RetrievalClassification": {
+      "enum": [
+        "operative",
+        "judgment-required",
+        "excluded"
+      ],
+      "title": "RetrievalClassification",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/ConflictReference"
+      },
+      "maxItems": 1000,
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "gold_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Gold Revision",
+      "type": "string"
+    },
+    "gold_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Gold Sha256",
+      "type": "string"
+    },
+    "labels": {
+      "items": {
+        "$ref": "#/$defs/GoldDecisionLabel"
+      },
+      "maxItems": 10000,
+      "minItems": 1,
+      "title": "Labels",
+      "type": "array"
+    },
+    "schema": {
+      "const": "context-library/retrieval-benchmark-gold",
+      "default": "context-library/retrieval-benchmark-gold",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[a-z][a-z0-9-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Task Revision",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "task_revision",
+    "gold_revision",
+    "gold_sha256",
+    "labels"
+  ],
+  "title": "RetrievalBenchmarkGold",
+  "type": "object"
+}

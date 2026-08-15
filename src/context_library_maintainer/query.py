@@ -5,7 +5,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from context_library_core.canonical import discover_packs, parse_register, resolve_pack
+from context_library_core.canonical import discover_packs, resolve_pack
+from context_library_core.shared_context import SharedContextError, resolve_effective_view
 
 from .models import canonical_json
 
@@ -65,10 +66,12 @@ def resolve_register(library_root: Path, project: str) -> tuple[Path, Path]:
 
 
 def read_library(library_root: Path, project: str) -> dict[str, Any]:
-    pack_root, register = resolve_register(library_root, project)
-    text = register.read_text(encoding="utf-8")
-    decisions = parse_register(text)
-    digest_input = {"register": text}
+    try:
+        effective = resolve_effective_view(library_root, project)
+    except SharedContextError as exc:
+        raise ValueError(str(exc)) from exc
+    pack_root, _ = resolve_register(library_root, project)
+    digest_input: dict[str, Any] = {"source_digests": effective.source_digests}
     for name in (
         "index-by-category.md",
         "index-by-date.md",
@@ -81,15 +84,18 @@ def read_library(library_root: Path, project: str) -> dict[str, Any]:
     library_digest = hashlib.sha256(canonical_json(digest_input).encode()).hexdigest()
     revision = _git_revision(library_root, library_digest[:16])
     records: list[dict[str, Any]] = []
-    for parsed in decisions:
-        evidence = [str(item) for item in parsed.metadata.get("evidence", ())]
+    for effective_item in effective.records:
+        parsed = effective_item.decision
+        evidence = [str(value) for value in parsed.metadata.get("evidence", ())]
         source_references = []
-        for item in evidence:
-            uri_match = URI.search(item)
+        for evidence_item in evidence:
+            uri_match = URI.search(evidence_item)
             uri, uri_redacted = _redact(
-                uri_match.group(0) if uri_match else "evidence:" + hashlib.sha256(item.encode()).hexdigest()[:16]
+                uri_match.group(0)
+                if uri_match
+                else "evidence:" + hashlib.sha256(evidence_item.encode()).hexdigest()[:16]
             )
-            label, label_redacted = _redact(item)
+            label, label_redacted = _redact(evidence_item)
             redacted = uri_redacted or label_redacted
             source_references.append(
                 {
@@ -134,6 +140,9 @@ def read_library(library_root: Path, project: str) -> dict[str, Any]:
                 "related_decisions": [],
                 "open_proposals": [],
                 "open_reviews": [],
+                "source_scope": effective_item.source_scope,
+                "source_project": effective_item.source_project,
+                "source_digest": effective_item.source_digest,
             }
         )
     by_id = {record["decision_id"]: record for record in records}
@@ -199,6 +208,9 @@ def query_library(
         "source_count",
         "publication_revision",
         "library_digest",
+        "source_scope",
+        "source_project",
+        "source_digest",
     }
     items = [
         {key: value for key, value in record.items() if key in summary_fields}

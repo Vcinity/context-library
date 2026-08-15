@@ -10,10 +10,13 @@ from pydantic import BaseModel
 from context_library_core.contracts import (
     AgentProviderRequest,
     AgentProviderResponse,
+    ApplicabilityRequest,
+    ApplicabilityResult,
     CapabilityEnvelope,
     CommandEnvelope,
     ContextPolicy,
     ContextResolution,
+    DecisionAuditResponse,
     MissingContextNotice,
     VersionEnvelope,
 )
@@ -24,18 +27,28 @@ from context_library_core.maintainer_contracts import (
     Finding,
     HarvestBatch,
     Observation,
+    PublicationAuthorization,
     SourceEnvelope,
 )
 from context_library_core.manager_contracts import ProposalSubmission, SessionIdentity
+from context_library_core.retrieval_contracts import (
+    RetrievalBenchmarkGold,
+    RetrievalBenchmarkReport,
+    RetrievalBenchmarkTask,
+)
+from context_library_core.task_context import TaskContextRequest, TaskContextResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "contracts/schemas"
 MODELS: dict[str, Type[BaseModel]] = {
     "agent-provider-request-v1": AgentProviderRequest,
     "agent-provider-response-v1": AgentProviderResponse,
+    "applicability-v1": ApplicabilityRequest,
+    "applicability-result-v1": ApplicabilityResult,
     "candidate-v1": Candidate,
     "capabilities-v1": CapabilityEnvelope,
     "context-policy-v1": ContextPolicy,
+    "decision-audit-response-v1": DecisionAuditResponse,
     "context-resolution-v1": ContextResolution,
     "conflict-packet-v1": ConflictPacket,
     "conflict-resolution-v1": ConflictResolution,
@@ -46,6 +59,12 @@ MODELS: dict[str, Type[BaseModel]] = {
     "manager-session-v1": SessionIdentity,
     "missing-context-notice-v1": MissingContextNotice,
     "observation-v1": Observation,
+    "publication-authorization-v1": PublicationAuthorization,
+    "retrieval-benchmark-gold-v1": RetrievalBenchmarkGold,
+    "retrieval-benchmark-report-v1": RetrievalBenchmarkReport,
+    "retrieval-benchmark-task-v1": RetrievalBenchmarkTask,
+    "task-context-request-v1": TaskContextRequest,
+    "task-context-response-v1": TaskContextResponse,
     "source-envelope-v1": SourceEnvelope,
     "version-v1": VersionEnvelope,
 }

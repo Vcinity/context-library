@@ -152,6 +152,9 @@ class DecisionSummary(Contract):
     provenance: Literal["explicit", "inferred", "assumed"]
     status: ContentStatus
     source_count: int = Field(default=0, ge=0)
+    source_scope: str = Field(default="", max_length=512)
+    source_project: str = Field(default="", max_length=256)
+    source_digest: str = Field(default="", max_length=128)
     publication_revision: str
     library_digest: str = Field(min_length=16, max_length=128)
 

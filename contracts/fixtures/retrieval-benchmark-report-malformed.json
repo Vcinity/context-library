@@ -1,0 +1,11 @@
+{
+  "schema": "context-library/retrieval-benchmark-report",
+  "schema_version": 1,
+  "report_id": "malformed-report",
+  "task_id": "synthetic-interface-change",
+  "task_revision": "task-r1",
+  "gold_revision": "gold-r1",
+  "gold_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "corpus_revision": "synthetic-corpus-r1",
+  "unexpected_private_field": true
+}

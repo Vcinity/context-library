@@ -23,6 +23,7 @@ fastapi = "^0.115.0"
 jinja2 = "^3.1.4"
 psycopg = {version = "^3.2.0", extras = ["binary"]}
 pydantic = "^2.11.0"
+tiktoken = "0.9.0"
 pyjwt = {version = "^2.9.0", extras = ["crypto"]}
 pyyaml = "^6.0.2"
 typer = "^0.16.0"

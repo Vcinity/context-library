@@ -3,17 +3,20 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_FAMILIES: dict[str, list[int]] = {
     "context-library/agent-provider-request": [1],
     "context-library/agent-provider-response": [1],
+    "context-library/applicability": [1],
+    "context-library/applicability-result": [1],
     "context-library/candidate": [1],
     "context-library/capabilities": [1],
     "context-library/configuration-draft": [1],
     "context-library/configuration-rollback": [1],
     "context-library/context-policy": [1],
     "context-library/context-resolution": [1],
+    "context-library/decision-audit-response": [1],
     "context-library/conflict-packet": [1],
     "context-library/conflict-resolution": [1],
     "context-library/finding": [1],
@@ -23,6 +26,9 @@ SCHEMA_FAMILIES: dict[str, list[int]] = {
     "context-library/manager-query": [1],
     "context-library/missing-context-notice": [1],
     "context-library/observation": [1],
+    "context-library/retrieval-benchmark-gold": [1],
+    "context-library/retrieval-benchmark-report": [1],
+    "context-library/retrieval-benchmark-task": [1],
     "context-library/source-envelope": [1],
     "context-library/version": [1],
 }
@@ -88,6 +94,121 @@ class MissingContextNotice(Contract):
     fabricated_substitute: Literal[False] = False
     invitation: str = "Provide relevant context if you want it applied."
     remediation: str = "Use the Context Library Manager to create or update canonical context."
+
+
+class ApplicabilityState(StrEnum):
+    UNCONDITIONAL = "unconditional"
+    SATISFIED = "satisfied"
+    UNSATISFIED = "unsatisfied"
+    UNDETERMINED = "undetermined"
+
+
+def _scope_values(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for value in values:
+        if not isinstance(value, str) or not value or value.startswith("/") or "\\" in value:
+            raise ValueError("repository scopes must be non-empty relative paths")
+        parts = value.split("/")
+        if any(part in {"", ".", ".."} for part in parts):
+            raise ValueError("repository scopes must not contain empty or traversal components")
+        if value not in normalized:
+            normalized.append(value)
+    if len(normalized) != len(values):
+        raise ValueError("repository scopes must be unique")
+    return normalized
+
+
+class ApplicabilityTask(Contract):
+    repository_scopes: list[str] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_scopes(self) -> "ApplicabilityTask":
+        _scope_values(self.repository_scopes)
+        return self
+
+
+class ApplicabilityDecision(Contract):
+    decision_id: str = Field(min_length=1, max_length=256)
+    repository_scopes: list[str] = Field(default_factory=list, max_length=100)
+    provenance: Literal["explicit", "inferred", "assumed"]
+    effective_provenance: Literal["explicit", "inferred", "assumed"]
+    source_scope: str = Field(min_length=1, max_length=512)
+    supersedes: list[str] = Field(default_factory=list, max_length=1000)
+    conflict_ids: list[str] = Field(default_factory=list, max_length=1000)
+    applies_when: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "ApplicabilityDecision":
+        _scope_values(self.repository_scopes)
+        if len(self.supersedes) != len(set(self.supersedes)):
+            raise ValueError("supersession references must be unique")
+        if len(self.conflict_ids) != len(set(self.conflict_ids)):
+            raise ValueError("conflict references must be unique")
+        return self
+
+
+class ApplicabilityRequest(Contract):
+    schema_id: Literal["context-library/applicability"] = Field(default="context-library/applicability", alias="schema")
+    schema_version: Literal[1] = 1
+    task: ApplicabilityTask
+    decision: ApplicabilityDecision
+
+
+class ApplicabilityResult(Contract):
+    schema_id: Literal["context-library/applicability-result"] = Field(
+        default="context-library/applicability-result", alias="schema"
+    )
+    schema_version: Literal[1] = 1
+    decision_id: str
+    state: ApplicabilityState
+    matched_selectors: dict[str, list[str]] = Field(default_factory=dict)
+    required_selectors: list[str] = Field(default_factory=list)
+    reason: Literal["none", "scope-mismatch", "missing-task-signal", "conditional-unresolved"]
+    provenance: Literal["explicit", "inferred", "assumed"]
+    effective_provenance: Literal["explicit", "inferred", "assumed"]
+    source_scope: str
+    supersedes: list[str] = Field(default_factory=list)
+    conflict_ids: list[str] = Field(default_factory=list)
+
+
+class DecisionAuditApplicability(Contract):
+    state: ApplicabilityState
+    reason: Literal["none", "scope-mismatch", "missing-task-signal", "conditional-unresolved"]
+    matched_selectors: dict[str, list[str]] = Field(default_factory=dict)
+    required_selectors: list[str] = Field(default_factory=list)
+
+
+class DecisionAuditRecord(Contract):
+    decision_id: str = Field(min_length=1, max_length=256)
+    subject: str = Field(min_length=1, max_length=4000)
+    category: str = Field(min_length=1, max_length=512)
+    decision: str = Field(min_length=1, max_length=4000)
+    constraints: list[str] = Field(default_factory=list, max_length=1000)
+    rationale: str | None = Field(default=None, max_length=20_000)
+    evidence: list[str] = Field(default_factory=list, max_length=1000)
+    provenance: Literal["explicit", "inferred", "assumed"]
+    effective_provenance: Literal["explicit", "inferred", "assumed"]
+    derivation: Literal["direct", "condensed", "synthesized"]
+    source_ids: list[str] = Field(default_factory=list, max_length=1000)
+    source_scope: str = Field(min_length=1, max_length=512)
+    supersedes: list[str] = Field(default_factory=list, max_length=1000)
+    conflict_ids: list[str] = Field(default_factory=list, max_length=1000)
+    conflict_key: str | None = Field(default=None, max_length=512)
+    affected_layers: list[str] = Field(default_factory=list, max_length=1000)
+    applies_when: str | None = Field(default=None, max_length=2000)
+    confidence: str | None = Field(default=None, max_length=512)
+    review: str | None = Field(default=None, max_length=512)
+    applicability: DecisionAuditApplicability
+
+
+class DecisionAuditResponse(Contract):
+    schema_id: Literal["context-library/decision-audit-response"] = Field(
+        default="context-library/decision-audit-response", alias="schema"
+    )
+    schema_version: Literal[1] = 1
+    project: str
+    revision: str = Field(min_length=1, max_length=256)
+    records: list[DecisionAuditRecord] = Field(min_length=1, max_length=100)
 
 
 class VersionEnvelope(Contract):

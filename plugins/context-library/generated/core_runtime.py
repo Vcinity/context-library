@@ -1,10 +1,11 @@
 # Generated from context_library_core.canonical; do not edit.
 # source-version: 0.3.4
-# source-sha256: ac71391e72361518ed35370ead10d576a26d00d38b4df6d81242f06ef4c22dd8
+# source-sha256: ec1a952601e08fc1e79e6c2fc2b79b32e791fb3ff7ad35c49db064e168685f9f
 from __future__ import annotations
 
 import dataclasses
 import re
+from bisect import bisect_right
 from pathlib import Path
 from typing import Iterable
 
@@ -124,6 +125,8 @@ def parse_register(text: str) -> tuple[Decision, ...]:
         raise CanonicalParseError("decision-like content appears before the first decision anchor")
     decisions: list[Decision] = []
     seen: set[str] = set()
+    sections = list(re.finditer(r"^##\s+(.+?)\s*$", text, re.MULTILINE))
+    section_starts = [section.start() for section in sections]
     for index, anchor in enumerate(anchors):
         decision_id = anchor.group(1)
         if not ID_RE.fullmatch(decision_id):
@@ -176,8 +179,10 @@ def parse_register(text: str) -> tuple[Decision, ...]:
         evidence = _items(fields, "evidence")
         if evidence:
             metadata["evidence"] = evidence
-        sections = list(re.finditer(r"^##\s+(.+?)\s*$", text[: anchor.start()], re.MULTILINE))
-        category = _one(fields, "category") or (sections[-1].group(1).strip() if sections else "Uncategorized")
+        section_index = bisect_right(section_starts, anchor.start()) - 1
+        category = _one(fields, "category") or (
+            sections[section_index].group(1).strip() if section_index >= 0 else "Uncategorized"
+        )
         decisions.append(
             Decision(
                 decision_id=decision_id,
@@ -383,6 +388,349 @@ CONTEXT_POLICY_JSON_SCHEMA = {'additionalProperties': False,
  'required': ['schema', 'schema_version', 'context_requirement'],
  'title': 'ContextPolicy',
  'type': 'object'}
+APPLICABILITY_REQUEST_JSON_SCHEMA = {'$defs': {'ApplicabilityDecision': {'additionalProperties': False,
+                                     'properties': {'applies_when': {'anyOf': [{'maxLength': 2000, 'type': 'string'},
+                                                                               {'type': 'null'}],
+                                                                     'default': None,
+                                                                     'title': 'Applies When'},
+                                                    'conflict_ids': {'items': {'type': 'string'},
+                                                                     'maxItems': 1000,
+                                                                     'title': 'Conflict Ids',
+                                                                     'type': 'array'},
+                                                    'decision_id': {'maxLength': 256,
+                                                                    'minLength': 1,
+                                                                    'title': 'Decision Id',
+                                                                    'type': 'string'},
+                                                    'effective_provenance': {'enum': ['explicit', 'inferred',
+                                                                                      'assumed'],
+                                                                             'title': 'Effective Provenance',
+                                                                             'type': 'string'},
+                                                    'provenance': {'enum': ['explicit', 'inferred', 'assumed'],
+                                                                   'title': 'Provenance',
+                                                                   'type': 'string'},
+                                                    'repository_scopes': {'items': {'type': 'string'},
+                                                                          'maxItems': 100,
+                                                                          'title': 'Repository Scopes',
+                                                                          'type': 'array'},
+                                                    'source_scope': {'maxLength': 512,
+                                                                     'minLength': 1,
+                                                                     'title': 'Source Scope',
+                                                                     'type': 'string'},
+                                                    'supersedes': {'items': {'type': 'string'},
+                                                                   'maxItems': 1000,
+                                                                   'title': 'Supersedes',
+                                                                   'type': 'array'}},
+                                     'required': ['decision_id', 'provenance', 'effective_provenance', 'source_scope'],
+                                     'title': 'ApplicabilityDecision',
+                                     'type': 'object'},
+           'ApplicabilityTask': {'additionalProperties': False,
+                                 'properties': {'repository_scopes': {'items': {'type': 'string'},
+                                                                      'maxItems': 100,
+                                                                      'title': 'Repository Scopes',
+                                                                      'type': 'array'}},
+                                 'title': 'ApplicabilityTask',
+                                 'type': 'object'}},
+ 'additionalProperties': False,
+ 'properties': {'decision': {'$ref': '#/$defs/ApplicabilityDecision'},
+                'schema': {'const': 'context-library/applicability',
+                           'default': 'context-library/applicability',
+                           'title': 'Schema',
+                           'type': 'string'},
+                'schema_version': {'const': 1, 'default': 1, 'title': 'Schema Version', 'type': 'integer'},
+                'task': {'$ref': '#/$defs/ApplicabilityTask'}},
+ 'required': ['task', 'decision'],
+ 'title': 'ApplicabilityRequest',
+ 'type': 'object'}
+TASK_CONTEXT_REQUEST_JSON_SCHEMA = {'$defs': {'TokenizerIdentity': {'additionalProperties': False,
+                                 'properties': {'accounting_method': {'maxLength': 512,
+                                                                      'minLength': 1,
+                                                                      'title': 'Accounting Method',
+                                                                      'type': 'string'},
+                                                'name': {'maxLength': 256,
+                                                         'minLength': 1,
+                                                         'title': 'Name',
+                                                         'type': 'string'},
+                                                'pinned': {'const': True,
+                                                           'default': True,
+                                                           'title': 'Pinned',
+                                                           'type': 'boolean'},
+                                                'version': {'maxLength': 128,
+                                                            'minLength': 1,
+                                                            'title': 'Version',
+                                                            'type': 'string'},
+                                                'vocabulary_revision': {'maxLength': 128,
+                                                                        'minLength': 1,
+                                                                        'title': 'Vocabulary Revision',
+                                                                        'type': 'string'}},
+                                 'required': ['name', 'version', 'vocabulary_revision', 'accounting_method'],
+                                 'title': 'TokenizerIdentity',
+                                 'type': 'object'}},
+ 'additionalProperties': False,
+ 'properties': {'agent_token_budget': {'minimum': 0, 'title': 'Agent Token Budget', 'type': 'integer'},
+                'operation': {'maxLength': 256, 'minLength': 1, 'title': 'Operation', 'type': 'string'},
+                'project': {'pattern': '^[a-z][a-z0-9-]*$', 'title': 'Project', 'type': 'string'},
+                'repository_scopes': {'items': {'type': 'string'},
+                                      'maxItems': 100,
+                                      'minItems': 1,
+                                      'title': 'Repository Scopes',
+                                      'type': 'array'},
+                'schema': {'const': 'context-library/task-context-request',
+                           'default': 'context-library/task-context-request',
+                           'title': 'Schema',
+                           'type': 'string'},
+                'schema_version': {'const': 1, 'default': 1, 'title': 'Schema Version', 'type': 'integer'},
+                'task_summary': {'maxLength': 4000, 'minLength': 1, 'title': 'Task Summary', 'type': 'string'},
+                'tokenizer': {'$ref': '#/$defs/TokenizerIdentity'}},
+ 'required': ['project', 'task_summary', 'operation', 'repository_scopes', 'agent_token_budget', 'tokenizer'],
+ 'title': 'TaskContextRequest',
+ 'type': 'object'}
+TASK_CONTEXT_RESPONSE_JSON_SCHEMA = {'$defs': {'ApplicabilityState': {'enum': ['unconditional', 'satisfied', 'unsatisfied', 'undetermined'],
+                                  'title': 'ApplicabilityState',
+                                  'type': 'string'},
+           'CapsuleAccounting': {'additionalProperties': False,
+                                 'properties': {'budget_status': {'enum': ['verified', 'unverified'],
+                                                                  'title': 'Budget Status',
+                                                                  'type': 'string'},
+                                                'serialized_content': {'title': 'Serialized Content', 'type': 'string'},
+                                                'sha256': {'pattern': '^[0-9a-f]{64}$',
+                                                           'title': 'Sha256',
+                                                           'type': 'string'},
+                                                'token_count': {'minimum': 0,
+                                                                'title': 'Token Count',
+                                                                'type': 'integer'},
+                                                'tokenizer': {'$ref': '#/$defs/TokenizerIdentity'},
+                                                'utf8_byte_count': {'minimum': 0,
+                                                                    'title': 'Utf8 Byte Count',
+                                                                    'type': 'integer'}},
+                                 'required': ['serialized_content', 'utf8_byte_count', 'sha256', 'token_count',
+                                              'tokenizer', 'budget_status'],
+                                 'title': 'CapsuleAccounting',
+                                 'type': 'object'},
+           'TaskContextCoverage': {'additionalProperties': False,
+                                   'properties': {'budget_status': {'enum': ['verified', 'unverified'],
+                                                                    'title': 'Budget Status',
+                                                                    'type': 'string'},
+                                                  'complete': {'title': 'Complete', 'type': 'boolean'},
+                                                  'omitted_operative_decision_ids': {'items': {'type': 'string'},
+                                                                                     'title': 'Omitted Operative '
+                                                                                              'Decision Ids',
+                                                                                     'type': 'array'},
+                                                  'operative_expected': {'minimum': 0,
+                                                                         'title': 'Operative Expected',
+                                                                         'type': 'integer'},
+                                                  'operative_included': {'minimum': 0,
+                                                                         'title': 'Operative Included',
+                                                                         'type': 'integer'}},
+                                   'required': ['operative_expected', 'operative_included', 'complete',
+                                                'budget_status'],
+                                   'title': 'TaskContextCoverage',
+                                   'type': 'object'},
+           'TaskContextItem': {'additionalProperties': False,
+                               'properties': {'conflict_ids': {'items': {'type': 'string'},
+                                                               'title': 'Conflict Ids',
+                                                               'type': 'array'},
+                                              'decision_id': {'maxLength': 256,
+                                                              'minLength': 1,
+                                                              'title': 'Decision Id',
+                                                              'type': 'string'},
+                                              'effective_provenance': {'enum': ['explicit', 'inferred', 'assumed'],
+                                                                       'title': 'Effective Provenance',
+                                                                       'type': 'string'},
+                                              'provenance': {'enum': ['explicit', 'inferred', 'assumed'],
+                                                             'title': 'Provenance',
+                                                             'type': 'string'},
+                                              'source_scope': {'maxLength': 512,
+                                                               'minLength': 1,
+                                                               'title': 'Source Scope',
+                                                               'type': 'string'},
+                                              'state': {'$ref': '#/$defs/ApplicabilityState'},
+                                              'supersedes': {'items': {'type': 'string'},
+                                                             'title': 'Supersedes',
+                                                             'type': 'array'},
+                                              'text': {'maxLength': 4000,
+                                                       'minLength': 1,
+                                                       'title': 'Text',
+                                                       'type': 'string'}},
+                               'required': ['decision_id', 'text', 'state', 'provenance', 'effective_provenance',
+                                            'source_scope'],
+                               'title': 'TaskContextItem',
+                               'type': 'object'},
+           'TaskContextTruncation': {'additionalProperties': False,
+                                     'properties': {'omitted_operative_decision_ids': {'items': {'type': 'string'},
+                                                                                       'title': 'Omitted Operative '
+                                                                                                'Decision Ids',
+                                                                                       'type': 'array'},
+                                                    'reason': {'default': 'none',
+                                                               'enum': ['none', 'token-budget'],
+                                                               'title': 'Reason',
+                                                               'type': 'string'},
+                                                    'truncated': {'title': 'Truncated', 'type': 'boolean'}},
+                                     'required': ['truncated'],
+                                     'title': 'TaskContextTruncation',
+                                     'type': 'object'},
+           'TokenizerIdentity': {'additionalProperties': False,
+                                 'properties': {'accounting_method': {'maxLength': 512,
+                                                                      'minLength': 1,
+                                                                      'title': 'Accounting Method',
+                                                                      'type': 'string'},
+                                                'name': {'maxLength': 256,
+                                                         'minLength': 1,
+                                                         'title': 'Name',
+                                                         'type': 'string'},
+                                                'pinned': {'const': True,
+                                                           'default': True,
+                                                           'title': 'Pinned',
+                                                           'type': 'boolean'},
+                                                'version': {'maxLength': 128,
+                                                            'minLength': 1,
+                                                            'title': 'Version',
+                                                            'type': 'string'},
+                                                'vocabulary_revision': {'maxLength': 128,
+                                                                        'minLength': 1,
+                                                                        'title': 'Vocabulary Revision',
+                                                                        'type': 'string'}},
+                                 'required': ['name', 'version', 'vocabulary_revision', 'accounting_method'],
+                                 'title': 'TokenizerIdentity',
+                                 'type': 'object'}},
+ 'additionalProperties': False,
+ 'properties': {'agent_visible_capsule': {'$ref': '#/$defs/CapsuleAccounting'},
+                'applicability_uncertainties': {'items': {'$ref': '#/$defs/TaskContextItem'},
+                                                'title': 'Applicability Uncertainties',
+                                                'type': 'array'},
+                'applicable_conflicts': {'items': {'type': 'string'}, 'title': 'Applicable Conflicts', 'type': 'array'},
+                'coverage': {'$ref': '#/$defs/TaskContextCoverage'},
+                'non_operative_directives': {'items': {'$ref': '#/$defs/TaskContextItem'},
+                                             'title': 'Non Operative Directives',
+                                             'type': 'array'},
+                'operative_directives': {'items': {'$ref': '#/$defs/TaskContextItem'},
+                                         'title': 'Operative Directives',
+                                         'type': 'array'},
+                'project': {'title': 'Project', 'type': 'string'},
+                'revision': {'maxLength': 256, 'minLength': 1, 'title': 'Revision', 'type': 'string'},
+                'schema': {'const': 'context-library/task-context-response',
+                           'default': 'context-library/task-context-response',
+                           'title': 'Schema',
+                           'type': 'string'},
+                'schema_version': {'const': 1, 'default': 1, 'title': 'Schema Version', 'type': 'integer'},
+                'truncation': {'$ref': '#/$defs/TaskContextTruncation'}},
+ 'required': ['project', 'revision', 'coverage', 'truncation', 'agent_visible_capsule'],
+ 'title': 'TaskContextResponse',
+ 'type': 'object'}
+DECISION_AUDIT_RESPONSE_JSON_SCHEMA = {'$defs': {'ApplicabilityState': {'enum': ['unconditional', 'satisfied', 'unsatisfied', 'undetermined'],
+                                  'title': 'ApplicabilityState',
+                                  'type': 'string'},
+           'DecisionAuditApplicability': {'additionalProperties': False,
+                                          'properties': {'matched_selectors': {'additionalProperties': {'items': {'type': 'string'},
+                                                                                                        'type': 'array'},
+                                                                               'title': 'Matched Selectors',
+                                                                               'type': 'object'},
+                                                         'reason': {'enum': ['none', 'scope-mismatch',
+                                                                             'missing-task-signal',
+                                                                             'conditional-unresolved'],
+                                                                    'title': 'Reason',
+                                                                    'type': 'string'},
+                                                         'required_selectors': {'items': {'type': 'string'},
+                                                                                'title': 'Required Selectors',
+                                                                                'type': 'array'},
+                                                         'state': {'$ref': '#/$defs/ApplicabilityState'}},
+                                          'required': ['state', 'reason'],
+                                          'title': 'DecisionAuditApplicability',
+                                          'type': 'object'},
+           'DecisionAuditRecord': {'additionalProperties': False,
+                                   'properties': {'affected_layers': {'items': {'type': 'string'},
+                                                                      'maxItems': 1000,
+                                                                      'title': 'Affected Layers',
+                                                                      'type': 'array'},
+                                                  'applicability': {'$ref': '#/$defs/DecisionAuditApplicability'},
+                                                  'applies_when': {'anyOf': [{'maxLength': 2000, 'type': 'string'},
+                                                                             {'type': 'null'}],
+                                                                   'default': None,
+                                                                   'title': 'Applies When'},
+                                                  'category': {'maxLength': 512,
+                                                               'minLength': 1,
+                                                               'title': 'Category',
+                                                               'type': 'string'},
+                                                  'confidence': {'anyOf': [{'maxLength': 512, 'type': 'string'},
+                                                                           {'type': 'null'}],
+                                                                 'default': None,
+                                                                 'title': 'Confidence'},
+                                                  'conflict_ids': {'items': {'type': 'string'},
+                                                                   'maxItems': 1000,
+                                                                   'title': 'Conflict Ids',
+                                                                   'type': 'array'},
+                                                  'conflict_key': {'anyOf': [{'maxLength': 512, 'type': 'string'},
+                                                                             {'type': 'null'}],
+                                                                   'default': None,
+                                                                   'title': 'Conflict Key'},
+                                                  'constraints': {'items': {'type': 'string'},
+                                                                  'maxItems': 1000,
+                                                                  'title': 'Constraints',
+                                                                  'type': 'array'},
+                                                  'decision': {'maxLength': 4000,
+                                                               'minLength': 1,
+                                                               'title': 'Decision',
+                                                               'type': 'string'},
+                                                  'decision_id': {'maxLength': 256,
+                                                                  'minLength': 1,
+                                                                  'title': 'Decision Id',
+                                                                  'type': 'string'},
+                                                  'derivation': {'enum': ['direct', 'condensed', 'synthesized'],
+                                                                 'title': 'Derivation',
+                                                                 'type': 'string'},
+                                                  'effective_provenance': {'enum': ['explicit', 'inferred', 'assumed'],
+                                                                           'title': 'Effective Provenance',
+                                                                           'type': 'string'},
+                                                  'evidence': {'items': {'type': 'string'},
+                                                               'maxItems': 1000,
+                                                               'title': 'Evidence',
+                                                               'type': 'array'},
+                                                  'provenance': {'enum': ['explicit', 'inferred', 'assumed'],
+                                                                 'title': 'Provenance',
+                                                                 'type': 'string'},
+                                                  'rationale': {'anyOf': [{'maxLength': 20000, 'type': 'string'},
+                                                                          {'type': 'null'}],
+                                                                'default': None,
+                                                                'title': 'Rationale'},
+                                                  'review': {'anyOf': [{'maxLength': 512, 'type': 'string'},
+                                                                       {'type': 'null'}],
+                                                             'default': None,
+                                                             'title': 'Review'},
+                                                  'source_ids': {'items': {'type': 'string'},
+                                                                 'maxItems': 1000,
+                                                                 'title': 'Source Ids',
+                                                                 'type': 'array'},
+                                                  'source_scope': {'maxLength': 512,
+                                                                   'minLength': 1,
+                                                                   'title': 'Source Scope',
+                                                                   'type': 'string'},
+                                                  'subject': {'maxLength': 4000,
+                                                              'minLength': 1,
+                                                              'title': 'Subject',
+                                                              'type': 'string'},
+                                                  'supersedes': {'items': {'type': 'string'},
+                                                                 'maxItems': 1000,
+                                                                 'title': 'Supersedes',
+                                                                 'type': 'array'}},
+                                   'required': ['decision_id', 'subject', 'category', 'decision', 'provenance',
+                                                'effective_provenance', 'derivation', 'source_scope', 'applicability'],
+                                   'title': 'DecisionAuditRecord',
+                                   'type': 'object'}},
+ 'additionalProperties': False,
+ 'properties': {'project': {'title': 'Project', 'type': 'string'},
+                'records': {'items': {'$ref': '#/$defs/DecisionAuditRecord'},
+                            'maxItems': 100,
+                            'minItems': 1,
+                            'title': 'Records',
+                            'type': 'array'},
+                'revision': {'maxLength': 256, 'minLength': 1, 'title': 'Revision', 'type': 'string'},
+                'schema': {'const': 'context-library/decision-audit-response',
+                           'default': 'context-library/decision-audit-response',
+                           'title': 'Schema',
+                           'type': 'string'},
+                'schema_version': {'const': 1, 'default': 1, 'title': 'Schema Version', 'type': 'integer'}},
+ 'required': ['project', 'revision', 'records'],
+ 'title': 'DecisionAuditResponse',
+ 'type': 'object'}
 
 
 def validate_context_policy(payload: object) -> dict[str, object]:
@@ -413,3 +761,317 @@ def validate_context_policy(payload: object) -> dict[str, object]:
     ):
         raise ValueError("context policy affected_layers must map strings to strings")
     return payload
+
+
+def evaluate_applicability(payload: object) -> dict[str, object]:
+    """Evaluate the Core v1 repository-scope rule without write dependencies."""
+    if not isinstance(payload, dict) or payload.get("schema") != "context-library/applicability":
+        raise ValueError("unsupported applicability schema family")
+    if payload.get("schema_version") != 1:
+        raise ValueError("unsupported applicability schema version")
+    task = payload.get("task")
+    decision = payload.get("decision")
+    if not isinstance(task, dict) or not isinstance(decision, dict):
+        raise ValueError("applicability task and decision are required objects")
+    task_scopes = task.get("repository_scopes", [])
+    decision_scopes = decision.get("repository_scopes", [])
+    if not all(
+        isinstance(item, str)
+        and item
+        and not item.startswith("/")
+        and ".." not in item.split("/")
+        for item in (*task_scopes, *decision_scopes)
+    ):
+        raise ValueError("repository scopes must be safe relative paths")
+    if len(task_scopes) != len(set(task_scopes)) or len(decision_scopes) != len(set(decision_scopes)):
+        raise ValueError("repository scopes must be unique")
+    matched = sorted(set(task_scopes) & set(decision_scopes))
+    if not decision_scopes and decision.get("applies_when") is None:
+        state, reason = "unconditional", "none"
+    elif decision.get("applies_when") is not None:
+        state, reason = "undetermined", "conditional-unresolved"
+    elif not task_scopes:
+        state, reason = "undetermined", "missing-task-signal"
+    elif matched:
+        state, reason = "satisfied", "none"
+    else:
+        state, reason = "unsatisfied", "scope-mismatch"
+    return {
+        "decision_id": decision.get("decision_id"),
+        "state": state,
+        "reason": reason,
+        "matched_selectors": {"repository_scopes": matched} if matched else {},
+        "required_selectors": ["repository_scopes"] if decision_scopes else [],
+        "provenance": decision.get("provenance"),
+        "effective_provenance": decision.get("effective_provenance"),
+        "source_scope": decision.get("source_scope"),
+        "supersedes": decision.get("supersedes", []),
+        "conflict_ids": decision.get("conflict_ids", []),
+    }
+
+
+# Generated task-context and audit helpers.  Keep this code dependency-free so
+# the independently installable Plugin can preserve Core semantics without
+# importing the write-capable application packages.
+import hashlib
+
+
+def _require_object(value: object, message: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise ValueError(message)
+    return value
+
+
+def validate_task_context_request(payload: object) -> dict[str, object]:
+    data = _require_object(payload, "task-context request must be a JSON object")
+    schema = TASK_CONTEXT_REQUEST_JSON_SCHEMA
+    properties = schema["properties"]
+    unknown = set(data).difference(properties)
+    if unknown:
+        raise ValueError(f"unknown task-context field: {sorted(unknown)[0]}")
+    if data.get("schema", "context-library/task-context-request") != "context-library/task-context-request":
+        raise ValueError("unsupported task-context schema family")
+    if data.get("schema_version", 1) != 1:
+        raise ValueError("unsupported task-context schema version")
+    required = (
+        "project",
+        "task_summary",
+        "operation",
+        "repository_scopes",
+        "agent_token_budget",
+        "tokenizer",
+    )
+    missing = [name for name in required if name not in data]
+    if missing:
+        raise ValueError(f"missing task-context field: {missing[0]}")
+    project = data["project"]
+    if not isinstance(project, str) or not re.fullmatch(r"^[a-z][a-z0-9-]*$", project):
+        raise ValueError("project must be a stable lowercase identifier")
+    for name in ("task_summary", "operation"):
+        if not isinstance(data[name], str) or not data[name].strip():
+            raise ValueError(f"{name} must be non-empty")
+    scopes = data["repository_scopes"]
+    if not isinstance(scopes, list) or not scopes:
+        raise ValueError("repository_scopes must be a non-empty list")
+    if any(
+        not isinstance(item, str)
+        or not item
+        or item.startswith("/")
+        or "\\" in item
+        or any(part in {"", ".", ".."} for part in item.split("/"))
+        for item in scopes
+    ):
+        raise ValueError("repository scopes must be non-empty relative paths")
+    if len(scopes) != len(set(scopes)):
+        raise ValueError("repository scopes must be unique")
+    if not isinstance(data["agent_token_budget"], int) or isinstance(data["agent_token_budget"], bool) or data["agent_token_budget"] < 0:
+        raise ValueError("agent_token_budget must be a non-negative integer")
+    tokenizer = _require_object(data["tokenizer"], "tokenizer must be an object")
+    allowed_tokenizer = {"name", "version", "vocabulary_revision", "accounting_method", "pinned"}
+    if set(tokenizer).difference(allowed_tokenizer):
+        raise ValueError("unknown tokenizer field")
+    if tokenizer.get("pinned", True) is not True:
+        raise ValueError("tokenizer must be pinned")
+    if any(not isinstance(tokenizer.get(name), str) or not tokenizer[name] for name in allowed_tokenizer - {"pinned"}):
+        raise ValueError("tokenizer identity fields must be non-empty strings")
+    data["tokenizer"] = dict(tokenizer)
+    data["tokenizer"].setdefault("pinned", True)
+    return data
+
+
+def _task_item(decision: Decision, state: str, source_scope: str) -> dict[str, object]:
+    return {
+        "decision_id": decision.decision_id,
+        "text": decision.decision,
+        "state": state,
+        "provenance": decision.provenance,
+        "effective_provenance": decision.provenance,
+        "source_scope": source_scope,
+        "supersedes": list(decision.supersedes),
+        "conflict_ids": list(decision.conflicts_with),
+    }
+
+
+def _render_task_context(payload: dict[str, object], decisions: tuple[Decision, ...], *, revision: str, source_scope: str) -> dict[str, object]:
+    scopes = payload["repository_scopes"]
+    superseded = {identifier for decision in decisions for identifier in decision.supersedes}
+    items: list[dict[str, object]] = []
+    for decision in decisions:
+        decision_scopes = list(decision.affected_layers)
+        evaluation = evaluate_applicability({
+            "schema": "context-library/applicability",
+            "schema_version": 1,
+            "task": {"repository_scopes": scopes},
+            "decision": {
+                "decision_id": decision.decision_id,
+                "repository_scopes": decision_scopes,
+                "provenance": decision.provenance,
+                "effective_provenance": decision.provenance,
+                "source_scope": source_scope,
+                "supersedes": list(decision.supersedes),
+                "conflict_ids": list(decision.conflicts_with),
+                "applies_when": decision.applies_when,
+            },
+        })
+        state = str(evaluation["state"])
+        if decision.provenance != "explicit" or decision.decision_id in superseded:
+            state = "unsatisfied"
+        items.append(_task_item(decision, state, source_scope))
+    ordered = sorted(items, key=lambda item: (str(item["state"]), str(item["decision_id"]), str(item["source_scope"])))
+    operative = [item for item in ordered if item["state"] in {"unconditional", "satisfied"}]
+    uncertainties = [item for item in ordered if item["state"] == "undetermined"]
+    non_operative = [item for item in ordered if item["state"] == "unsatisfied"]
+    tokenizer = payload["tokenizer"]
+    budget_status = "unverified"
+    encoder = None
+    if (
+        tokenizer.get("name") == "tiktoken"
+        and tokenizer.get("version") == "0.9.0"
+        and tokenizer.get("vocabulary_revision") == "cl100k_base"
+    ):
+        try:
+            import tiktoken
+            encoder = tiktoken.get_encoding("cl100k_base")
+            budget_status = "verified"
+        except (ImportError, ValueError):
+            pass
+    capsule_lines = [f"# Task context: {payload['project']}", f"revision: {revision}", "", "## Operative directives"]
+    capsule_lines.extend(f"- [{item['decision_id']}] {item['text']}" for item in operative)
+    capsule = "\n".join(capsule_lines) + "\n"
+    token_count = len(encoder.encode(capsule)) if encoder is not None else 0
+    omitted = []
+    if token_count > payload["agent_token_budget"]:
+        omitted = [str(item["decision_id"]) for item in operative]
+        capsule = ""
+        token_count = 0
+    encoded = capsule.encode("utf-8")
+    return {
+        "schema": "context-library/task-context-response",
+        "schema_version": 1,
+        "project": payload["project"],
+        "revision": revision,
+        "operative_directives": operative,
+        "applicability_uncertainties": uncertainties,
+        "non_operative_directives": non_operative,
+        "applicable_conflicts": sorted({str(conflict) for item in operative + uncertainties + non_operative for conflict in item["conflict_ids"]}),
+        "coverage": {
+            "operative_expected": len(operative),
+            "operative_included": len(operative) - len(omitted),
+            "omitted_operative_decision_ids": omitted,
+            "complete": not omitted,
+            "budget_status": budget_status,
+        },
+        "truncation": {
+            "truncated": bool(omitted),
+            "reason": "token-budget" if omitted else "none",
+            "omitted_operative_decision_ids": omitted,
+        },
+        "agent_visible_capsule": {
+            "serialized_content": capsule,
+            "utf8_byte_count": len(encoded),
+            "sha256": hashlib.sha256(encoded).hexdigest(),
+            "token_count": token_count,
+            "tokenizer": tokenizer,
+            "budget_status": budget_status,
+        },
+    }
+
+
+def resolve_task_context(payload: object, register: str, *, revision: str, source_scope: str) -> dict[str, object]:
+    request = validate_task_context_request(payload)
+    return _render_task_context(request, parse_register(register), revision=revision, source_scope=source_scope)
+
+
+def _audit_applicability(decision: Decision) -> dict[str, object]:
+    scopes = list(decision.affected_layers)
+    if not scopes and decision.applies_when is None:
+        state, reason = "unconditional", "none"
+    elif decision.applies_when is not None:
+        state, reason = "undetermined", "conditional-unresolved"
+    else:
+        state, reason = "undetermined", "missing-task-signal"
+    return {
+        "state": state,
+        "reason": reason,
+        "matched_selectors": {},
+        "required_selectors": ["repository_scopes"] if scopes else [],
+    }
+
+
+def _effective_provenances(decisions: tuple[Decision, ...]) -> dict[str, str]:
+    by_id = {decision.decision_id: decision for decision in decisions}
+    resolved: dict[str, str] = {}
+    visiting: set[str] = set()
+
+    def resolve(identifier: str) -> str:
+        if identifier in resolved:
+            return resolved[identifier]
+        if identifier in visiting:
+            raise ValueError(f"synthesis provenance cycle includes {identifier}")
+        visiting.add(identifier)
+        decision = by_id[identifier]
+        values = [decision.provenance]
+        if decision.derivation == "synthesized":
+            values.extend(resolve(source_id) for source_id in decision.source_ids)
+        visiting.remove(identifier)
+        resolved[identifier] = min(values, key=PROVENANCE_RANK.__getitem__)
+        return resolved[identifier]
+
+    for identifier in by_id:
+        resolve(identifier)
+    return resolved
+
+
+def build_decision_audit(register: str, *, project: str, revision: str, source_scope: str, decision_ids: list[str], include_related: bool = False) -> dict[str, object]:
+    decisions = parse_register(register)
+    by_id = {decision.decision_id: decision for decision in decisions}
+    if not decision_ids or len(decision_ids) > 100 or len(decision_ids) != len(set(decision_ids)):
+        raise ValueError("decision_ids must contain between 1 and 100 unique IDs")
+    if any(not isinstance(identifier, str) or not ID_RE.fullmatch(identifier) for identifier in decision_ids):
+        raise ValueError("decision IDs must be stable identifiers")
+    if not isinstance(include_related, bool):
+        raise ValueError("include_related must be a boolean")
+    selected = set(decision_ids)
+    unknown = selected.difference(by_id)
+    if unknown:
+        raise ValueError(f"unknown decision ID: {sorted(unknown)[0]}")
+    if include_related:
+        for decision in decisions:
+            references = set(decision.supersedes) | set(decision.conflicts_with) | set(decision.source_ids)
+            if decision.decision_id in selected or references.intersection(selected):
+                selected.add(decision.decision_id)
+    effective_provenance = _effective_provenances(decisions)
+    records = []
+    for decision in decisions:
+        if decision.decision_id not in selected:
+            continue
+        metadata = decision.metadata
+        records.append({
+            "decision_id": decision.decision_id,
+            "subject": decision.subject,
+            "category": decision.category,
+            "decision": decision.decision,
+            "constraints": list(decision.constraints),
+            "rationale": metadata.get("rationale"),
+            "evidence": list(metadata.get("evidence", ())),
+            "provenance": decision.provenance,
+            "effective_provenance": effective_provenance[decision.decision_id],
+            "derivation": decision.derivation,
+            "source_ids": list(decision.source_ids),
+            "source_scope": source_scope,
+            "supersedes": list(decision.supersedes),
+            "conflict_ids": list(decision.conflicts_with),
+            "conflict_key": decision.conflict_key,
+            "affected_layers": list(decision.affected_layers),
+            "applies_when": decision.applies_when,
+            "confidence": decision.confidence,
+            "review": None if decision.review == "review_status" else decision.review,
+            "applicability": _audit_applicability(decision),
+        })
+    return {
+        "schema": "context-library/decision-audit-response",
+        "schema_version": 1,
+        "project": project,
+        "revision": revision,
+        "records": records,
+    }

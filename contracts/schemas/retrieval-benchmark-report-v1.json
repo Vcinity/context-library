@@ -1,0 +1,399 @@
+{
+  "$defs": {
+    "AgentVisibleResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "serialization_format": {
+          "const": "utf-8-json",
+          "title": "Serialization Format",
+          "type": "string"
+        },
+        "serialized_content": {
+          "minLength": 1,
+          "title": "Serialized Content",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "utf8_byte_count": {
+          "exclusiveMinimum": 0,
+          "title": "Utf8 Byte Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "serialization_format",
+        "serialized_content",
+        "utf8_byte_count",
+        "sha256"
+      ],
+      "title": "AgentVisibleResponse",
+      "type": "object"
+    },
+    "CoverageReport": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "enum": [
+            "task-signal",
+            "gold-labels",
+            "undetermined"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "complete_coverage_claimed": {
+          "title": "Complete Coverage Claimed",
+          "type": "boolean"
+        },
+        "complete_coverage_possible": {
+          "title": "Complete Coverage Possible",
+          "type": "boolean"
+        },
+        "detected_conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Detected Conflict Ids",
+          "type": "array"
+        },
+        "missed_conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Missed Conflict Ids",
+          "type": "array"
+        },
+        "missing_operative_decision_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10000,
+          "title": "Missing Operative Decision Ids",
+          "type": "array"
+        },
+        "operative_expected": {
+          "minimum": 0,
+          "title": "Operative Expected",
+          "type": "integer"
+        },
+        "operative_recalled": {
+          "minimum": 0,
+          "title": "Operative Recalled",
+          "type": "integer"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "truncation_reason": {
+          "default": "none",
+          "enum": [
+            "none",
+            "token-budget",
+            "result-limit",
+            "serialization-limit"
+          ],
+          "title": "Truncation Reason",
+          "type": "string"
+        },
+        "unsafe_inclusion_decision_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10000,
+          "title": "Unsafe Inclusion Decision Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "basis",
+        "operative_expected",
+        "operative_recalled",
+        "complete_coverage_possible",
+        "complete_coverage_claimed"
+      ],
+      "title": "CoverageReport",
+      "type": "object"
+    },
+    "RetrievalBenchmarkResult": {
+      "additionalProperties": false,
+      "properties": {
+        "adherence": {
+          "default": "not-evaluated",
+          "enum": [
+            "not-evaluated",
+            "pass",
+            "fail"
+          ],
+          "title": "Adherence",
+          "type": "string"
+        },
+        "agent_directed_tool_calls": {
+          "minimum": 0,
+          "title": "Agent Directed Tool Calls",
+          "type": "integer"
+        },
+        "agent_visible_response": {
+          "$ref": "#/$defs/AgentVisibleResponse"
+        },
+        "agent_visible_tokens": {
+          "minimum": 0,
+          "title": "Agent Visible Tokens",
+          "type": "integer"
+        },
+        "baseline_agent_visible_tokens": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline Agent Visible Tokens"
+        },
+        "baseline_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Baseline Id",
+          "type": "string"
+        },
+        "baseline_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline Reference"
+        },
+        "coverage": {
+          "$ref": "#/$defs/CoverageReport"
+        },
+        "mechanism_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mechanism Id",
+          "type": "string"
+        },
+        "reduction_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reduction Tokens"
+        },
+        "relative_reduction": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": -1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relative Reduction"
+        },
+        "repeated_token_count": {
+          "minimum": 0,
+          "title": "Repeated Token Count",
+          "type": "integer"
+        },
+        "repeated_token_definition": {
+          "const": "sum-token-occurrences-after-first-per-token",
+          "title": "Repeated Token Definition",
+          "type": "string"
+        },
+        "task_correctness": {
+          "default": "not-evaluated",
+          "enum": [
+            "not-evaluated",
+            "pass",
+            "fail"
+          ],
+          "title": "Task Correctness",
+          "type": "string"
+        }
+      },
+      "required": [
+        "baseline_id",
+        "mechanism_id",
+        "coverage",
+        "agent_visible_response",
+        "agent_visible_tokens",
+        "repeated_token_count",
+        "repeated_token_definition",
+        "agent_directed_tool_calls"
+      ],
+      "title": "RetrievalBenchmarkResult",
+      "type": "object"
+    },
+    "SecondaryResourceMeasurements": {
+      "additionalProperties": false,
+      "properties": {
+        "filesystem_reads": {
+          "minimum": 0,
+          "title": "Filesystem Reads",
+          "type": "integer"
+        },
+        "index_bytes": {
+          "minimum": 0,
+          "title": "Index Bytes",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "latency_ms",
+        "filesystem_reads",
+        "index_bytes"
+      ],
+      "title": "SecondaryResourceMeasurements",
+      "type": "object"
+    },
+    "TokenizerIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "accounting_method": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Accounting Method",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "pinned": {
+          "const": true,
+          "default": true,
+          "title": "Pinned",
+          "type": "boolean"
+        },
+        "version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "vocabulary_revision": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Vocabulary Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "vocabulary_revision",
+        "accounting_method"
+      ],
+      "title": "TokenizerIdentity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "corpus_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Corpus Revision",
+      "type": "string"
+    },
+    "gold_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Gold Revision",
+      "type": "string"
+    },
+    "gold_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Gold Sha256",
+      "type": "string"
+    },
+    "report_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Report Id",
+      "type": "string"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/RetrievalBenchmarkResult"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Results",
+      "type": "array"
+    },
+    "schema": {
+      "const": "context-library/retrieval-benchmark-report",
+      "default": "context-library/retrieval-benchmark-report",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "secondary_resources": {
+      "$ref": "#/$defs/SecondaryResourceMeasurements"
+    },
+    "task_id": {
+      "pattern": "^[a-z][a-z0-9-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_revision": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Task Revision",
+      "type": "string"
+    },
+    "tokenizer": {
+      "$ref": "#/$defs/TokenizerIdentity"
+    }
+  },
+  "required": [
+    "report_id",
+    "task_id",
+    "task_revision",
+    "gold_revision",
+    "gold_sha256",
+    "corpus_revision",
+    "tokenizer",
+    "results",
+    "secondary_resources"
+  ],
+  "title": "RetrievalBenchmarkReport",
+  "type": "object"
+}

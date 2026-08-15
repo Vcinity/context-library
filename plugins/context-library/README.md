@@ -63,7 +63,10 @@ The trusted session-start hook acts only on explicit context policy and project
 binding. Required unavailable context produces an advisory notice. Optional
 unavailable context fails open without task interference. Disabled and
 undetermined context add no guidance. Git is used only to find an activation
-root. The hook never mutates companion-library decision content.
+root. Automatic projection is limited to current explicit universal
+constraints; scoped, conditional, superseded, conflicted, inferred, and
+assumed guidance requires an explicit task-context request or on-demand
+operation. The hook never mutates companion-library decision content.
 
 ## Constraint Projection
 
