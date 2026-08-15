@@ -10,8 +10,11 @@ Establish an inspectable production measurement window proving whether the
 post-intake autonomy SLO is met. Reconcile the deployed producer manifest,
 durable event sequences, heartbeats, watermarks, cohort membership, item
 lineage, and replayed materialized state for one continuous rolling 30-day
-window. Publish a report and dashboard/API evidence that keeps history,
-telemetry, and SLO states separate and names every coverage gap.
+window. The cohort consists of items intake-accepted in the window plus items
+created before the window that were unresolved at its start; items resolved
+before the window began are excluded. Publish a report and dashboard/API
+evidence that keeps history, telemetry, and SLO states separate and names
+every coverage gap.
 
 This issue does not represent fixtures or short windows as production evidence,
 backfill missing events from inference, weaken the 60-second heartbeat or
@@ -25,12 +28,16 @@ issue cannot be closed as achieved.
 The evidence bundle MUST identify deployment and manifest revision, window
 start/end, required producers, per-project sequence ranges and watermarks,
 heartbeat intervals, intake-accepted cohort items, effective policy revision
-and eligibility classification, state/review/policy/agent/notification event
-lineage, replay reconciliation result, coverage gaps, and safe redacted
+and eligibility classification, work/review/policy/agent-invocation/notification
+event lineage, replay reconciliation result, coverage gaps, and safe redacted
 operator provenance. It MUST report numerator, denominator, exclusions,
-autonomy-rate segments, agent invocation reasons/counts, inappropriate calls,
-retry/failure and escalation metrics, backlog age, deferral, and cost/token
-metrics where persisted evidence supports them.
+deterministic-only completion rate, cache-only semantic completion rate,
+model-assisted completion rate, agent cache-hit rate, duplicate-work rate,
+median and p95 time-to-terminal-outcome, agent invocation reasons/counts,
+inappropriate calls, retry/failure and escalation metrics, backlog age,
+deferral, tokens-per-item, and cost-per-decision. Missing evidence for any
+MUST-report field is itself a named coverage gap and forces
+`insufficient-telemetry`; it is never silently omitted.
 
 The dashboard/API MUST preserve SPEC.md precedence:
 `insufficient-telemetry` > `insufficient-history` > `no-data` > `met` >
@@ -54,7 +61,10 @@ unreconciled replay, carried-in unresolved items, policy revisions, human
 interventions, retries, inappropriate invocations, complete telemetry, and
 the exact SLO precedence. They MUST NOT be described as production evidence.
 Production acceptance additionally requires an actual continuous 30-day
-window from the deployed producer manifest and durable events.
+window from the deployed producer manifest and durable events. The required
+producer set is immutable for the window and MUST NOT be changed retroactively.
+A heartbeat after a gap is not evidence that missing events were recovered;
+only durable event recovery plus replay reconciliation can close that gap.
 
 ## Affected components and validation
 
@@ -65,8 +75,11 @@ window from the deployed producer manifest and durable events.
 
 Run focused telemetry/replay tests, applicable Manager smoke and API checks,
 `PYTHONPATH=src make test` or its deterministic equivalent,
-`git diff --check`, and the production evidence verifier. No provider or
-canonical-data mutation is permitted.
+`git diff --check`, and
+`PYTHONPATH=src python scripts/verify_production_evidence.py --bundle <redacted-evidence-bundle>`.
+The verifier is an implementation deliverable and MUST fail closed on missing
+manifest, cohort, sequence, heartbeat, watermark, metric, or replay evidence.
+No provider or canonical-data mutation is permitted.
 
 ## Risks and unresolved questions
 
