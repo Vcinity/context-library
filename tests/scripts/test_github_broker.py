@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import select
 import subprocess
 import sys
 from pathlib import Path
@@ -164,55 +163,7 @@ def test_rejects_unbrokered_executable_and_cached_mutation(broker_env: dict[str,
     assert "mutating calls cannot use" in cached_mutation.stderr
 
 
-def test_gate_reads_targeted_project_field(broker_env: dict[str, str]) -> None:
-    broker_env["FAKE_GH_MODE"] = "gate"
-    Path(broker_env["FAKE_GH_STATE"]).write_text("Approved", encoding="utf-8")
-    result = run_broker(broker_env, "gate", "--item-id", "PVTI_fixture")
-
-    assert result.returncode == 0
-    assert '"gate": "Approved"' in result.stdout
-    assert '"option_id": "fixture-option"' in result.stdout
-
-
-def test_wait_gate_is_quiet_until_approval_transition(broker_env: dict[str, str]) -> None:
-    broker_env["FAKE_GH_MODE"] = "gate"
-    state_path = Path(broker_env["FAKE_GH_STATE"])
-    state_path.write_text("Awaiting approval", encoding="utf-8")
-    process = subprocess.Popen(
-        broker_command(
-            "wait-gate",
-            "--item-id",
-            "PVTI_fixture",
-            "--interval",
-            "0.05",
-            "--from-state",
-            "Awaiting approval",
-        ),
-        env=broker_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    try:
-        import time
-
-        time.sleep(0.12)
-        assert process.poll() is None
-        assert process.stdout is not None
-        ready, _, _ = select.select([process.stdout], [], [], 0)
-        assert ready == []
-        state_path.write_text("Approved", encoding="utf-8")
-        stdout, _ = process.communicate(timeout=2)
-    finally:
-        if process.poll() is None:
-            process.kill()
-            process.communicate()
-
-    assert '"gate": "Approved"' in stdout
-    assert '"previous_gate": "Awaiting approval"' in stdout
-
-
-def test_broker_help_exposes_quiet_gate_wait_action(broker_env: dict[str, str]) -> None:
+def test_broker_help_exposes_bounded_surface(broker_env: dict[str, str]) -> None:
     result = subprocess.run(
         [sys.executable, str(BROKER), "--help"],
         capture_output=True,
@@ -224,5 +175,5 @@ def test_broker_help_exposes_quiet_gate_wait_action(broker_env: dict[str, str]) 
     assert result.returncode == 0
     assert "run" in result.stdout
     assert "cache-path" in result.stdout
-    assert "wait-gate" in result.stdout
-    assert "gate" in result.stdout
+    assert "wait-gate" not in result.stdout
+    assert "gate" not in result.stdout

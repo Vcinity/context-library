@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Iterator, Sequence
 
 DEFAULT_RETRY_DELAYS = "60,120,240,480"
-DEFAULT_GATE_INTERVAL = 60.0
 RATE_LIMIT_MARKERS = (
     "rate limit",
     "rate-limit",
@@ -171,85 +170,6 @@ class GitHubBroker:
             return completed
 
 
-GATE_QUERY = """
-query($itemId: ID!, $fieldName: String!) {
-  node(id: $itemId) {
-    ... on ProjectV2Item {
-      fieldValueByName(name: $fieldName) {
-        ... on ProjectV2ItemFieldSingleSelectValue {
-          name
-          optionId
-        }
-      }
-    }
-  }
-}
-""".strip()
-
-
-def read_gate(
-    broker: GitHubBroker,
-    item_id: str,
-    field_name: str,
-    retry_delays: Sequence[float],
-) -> dict[str, str | None]:
-    completed = broker.invoke(
-        [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={GATE_QUERY}",
-            "-F",
-            f"itemId={item_id}",
-            "-F",
-            f"fieldName={field_name}",
-        ],
-        retry_delays=retry_delays,
-    )
-    if completed.returncode != 0:
-        raise BrokerError(completed.stderr.strip() or "GitHub gate query failed")
-    try:
-        payload = json.loads(completed.stdout)
-        value = payload["data"]["node"]["fieldValueByName"]
-    except (KeyError, TypeError, json.JSONDecodeError) as exc:
-        raise BrokerError("GitHub gate query returned an invalid response") from exc
-    if value is None:
-        return {"gate": None, "option_id": None}
-    return {"gate": value.get("name"), "option_id": value.get("optionId")}
-
-
-def emit_gate(payload: dict[str, str | None], previous_gate: str | None = None) -> int:
-    result = dict(payload)
-    if previous_gate is not None:
-        result["previous_gate"] = previous_gate
-    print(json.dumps(result, sort_keys=True))
-    return 0
-
-
-def wait_for_gate(
-    broker: GitHubBroker,
-    item_id: str,
-    field_name: str,
-    from_state: str,
-    interval: float,
-    retry_delays: Sequence[float],
-) -> int:
-    failure_backoff = 0
-    while True:
-        try:
-            payload = read_gate(broker, item_id, field_name, retry_delays)
-            failure_backoff = 0
-            gate = payload["gate"]
-            if gate in {"Approved", "Changes requested"} and gate != from_state:
-                return emit_gate(payload, from_state)
-            time.sleep(interval)
-        except BrokerError:
-            delay = retry_delays[min(failure_backoff, len(retry_delays) - 1)] if retry_delays else 60.0
-            failure_backoff += 1
-            time.sleep(max(0.0, min(delay, 480.0)))
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serialize and cache orchestration GitHub access")
     parser.add_argument(
@@ -269,15 +189,6 @@ def build_parser() -> argparse.ArgumentParser:
     cache_parser = subparsers.add_parser("cache-path", help="print the snapshot path for a cache key")
     cache_parser.add_argument("key")
 
-    gate_parser = subparsers.add_parser("gate", help="read one Project Spec Gate field")
-    gate_parser.add_argument("--item-id", required=True)
-    gate_parser.add_argument("--field-name", default="Spec Gate")
-
-    wait_parser = subparsers.add_parser("wait-gate", help="quietly wait for an approval gate transition")
-    wait_parser.add_argument("--item-id", required=True)
-    wait_parser.add_argument("--field-name", default="Spec Gate")
-    wait_parser.add_argument("--from-state", default="Awaiting approval")
-    wait_parser.add_argument("--interval", type=float, default=DEFAULT_GATE_INTERVAL)
     return parser
 
 
@@ -308,19 +219,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.action == "cache-path":
             print(broker.cache_path(args.key))
             return 0
-        if args.action == "gate":
-            return emit_gate(read_gate(broker, args.item_id, args.field_name, retry_delays))
-        if args.action == "wait-gate":
-            if args.interval < 0:
-                raise BrokerError("gate interval cannot be negative")
-            return wait_for_gate(
-                broker,
-                args.item_id,
-                args.field_name,
-                args.from_state,
-                args.interval,
-                retry_delays,
-            )
         raise BrokerError("unknown broker action")
     except BrokerError as exc:
         print(f"github-broker: {exc}", file=sys.stderr)
