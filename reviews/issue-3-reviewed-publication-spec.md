@@ -43,7 +43,19 @@ never requires broadening its candidate set. `automatic_publication` remains
 false before, during, and after an explicitly authorized publication. Each
 mutating audit record includes actor, project, operation, input identity,
 policy revision, result, affected records, and a safe error classification;
-rejections record the same fields without secret evidence.
+rejections record the same fields without secret evidence. The authorization
+approval and resulting publication events are linked into the Manager's
+autonomy/human-intervention event lineage with the approved item IDs and
+review identity; any item published through this path is classified as having
+human intervention and is excluded from the autonomous numerator.
+
+The Manager authorization endpoint preserves the existing authenticated
+session boundary, CSRF protection, and browser/M2M credential separation. A
+break-glass `clm publish` operation must honor the same authorization and
+publication gates; if it publishes a candidate with a pending Manager
+authorization, it consumes or invalidates that authorization atomically and
+records the administrative actor in the same lineage. It may not race to
+reuse or duplicate the envelope.
 
 ## Affected components
 
