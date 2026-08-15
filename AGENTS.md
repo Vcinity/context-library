@@ -15,13 +15,16 @@
 
 ## Roadmap and ticket execution
 
-- The public [Context Library Roadmap](https://github.com/orgs/Vcinity/projects/1)
-  is authoritative for planned work and sequencing. GitHub issues are the
+- GitHub organization Project 1 for this repository's owner is authoritative
+  for planned work and sequencing. GitHub issues are the
   units of implementation scope; `SPEC.md` remains authoritative for product
   behavior and acceptance rules.
 - Before starting a roadmap issue, read its dependencies and do not implement
   a blocked downstream contract unless the issue or user explicitly changes
   the sequence.
+- For long-running roadmap orchestration, follow
+  `docs/GITHUB_ORCHESTRATION.md`: the orchestrator owns serialized broker
+  access, and subagents consume local snapshots instead of querying GitHub.
 - Treat an issue's goal, acceptance criteria, implementation orientation, and
   named specification sections as one bounded work package. Inspect the named
   source and test patterns before adding new structure.
@@ -35,7 +38,7 @@
 - Close an issue only with the validation evidence requested by that issue and
   the applicable root checks. Record intentionally omitted checks and why.
 
-### Human specification approval gate
+### Autonomous specification quality gate
 
 - Roadmap implementation MUST use two distinct phases for each issue:
   specification review, then implementation. Selecting an issue authorizes
@@ -50,13 +53,39 @@
   such as a dedicated planning commit or pull request, and MUST comply with
   public-repository and canonical-data boundaries. Ephemeral agent context is
   not sufficient review evidence.
-- After producing the artifacts, set the GitHub Project `Spec Gate` field to
-  `Awaiting approval`, report the review location, and stop. Only explicit
-  human approval may set the gate to `Approved`; an agent MUST NOT approve its
-  own specification or infer approval from silence.
-- Implementation may begin only when the issue's `Spec Gate` is `Approved`.
-  Material changes to the approved scope, contract, or design reset the gate
-  to `Awaiting approval` and require another human review before work resumes.
+- Before implementation, a fresh read-only Claude Code session MUST assess the
+  preserved specification for scope control, contract correctness, test
+  adequacy, authority boundaries, and unresolved risks. Invoke `claude` in
+  non-interactive plan mode; never use permission bypass for review.
+- Use the cheapest currently available Claude model that produces an
+  acceptable review efficiently. Select `haiku` at `medium` effort for a
+  narrow, low-risk specification with stable contracts; select `sonnet` at
+  `medium` for normal code review or any shared-contract, cross-component,
+  authority, security, or end-to-end concern. A review is acceptable only when
+  it explicitly covers every required dimension, gives a PASS or actionable
+  findings, and supports each finding with severity, exact repository
+  evidence, violated authority or criterion, impact, and the smallest
+  correction. Retry once with a tighter prompt for a format-only failure;
+  escalate effort or model only for deficient reasoning or coverage. Record
+  the selection rationale, resolved model, effort, attempts, and escalation
+  reason.
+- The orchestrator MUST verify Claude's cited evidence, resolve all Critical
+  and High findings, and record the review evidence. Claude unavailability,
+  authentication failure, or exhausted quota is a genuine external blocker;
+  do not silently substitute a Codex self-review.
+- After the independent review passes, the orchestrator MAY set the GitHub
+  Project `Spec Gate` field to `Approved`, post a signed evidence summary, and
+  continue directly into implementation without waiting for human action.
+  `Approved` records an autonomous quality checkpoint; it does not claim human
+  endorsement.
+- Material changes to the accepted scope, contract, design, or test strategy
+  reset the gate to `Drafting` and require refreshed artifacts and independent
+  review. Explicit human feedback or `Changes requested` always takes
+  precedence and MUST be resolved before implementation continues.
+- Stop for human direction only when applicable authorities conflict, scope
+  would materially expand, a consequential choice has no defensible answer in
+  the issue or repository, required credentials or permissions are missing,
+  or an action exceeds the granted safety boundary.
 
 ### Roadmap testing strategy
 
