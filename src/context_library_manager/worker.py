@@ -111,6 +111,7 @@ class Worker:
                     state_root=self.settings.state_root,
                     project=self.settings.project,
                     actor=self.owner,
+                    policy_revision=str(payload.get("policy_revision", "1")),
                 )
             )
             try:
@@ -186,6 +187,7 @@ class Worker:
                     state_root=self.settings.state_root,
                     project=self.settings.project,
                     actor=self.owner,
+                    policy_revision=str(payload.get("policy_revision", "1")),
                 )
             )
             try:
@@ -200,6 +202,7 @@ class Worker:
                             state_root=self.settings.state_root,
                             project=self.settings.project,
                             actor=resolver,
+                            policy_revision=str(payload.get("policy_revision", "1")),
                         )
                     )
                     rationale = payload.get(
@@ -251,7 +254,7 @@ class Worker:
                         if payload.get("authorized_publication"):
                             if not self._library_is_clean():
                                 return self._wait_for_publication_review(work_id, "dirty-library-worktree")
-                            published = self._publish_ready(work_id, resolution_service)
+                            published = self._publish_authorized(work_id, resolution_service, payload)
                             if resolution_candidate_id not in published.get("published", []):
                                 raise ValueError("authorized resolution candidate was not published")
                             self._record_publication(work_id, published)
@@ -287,7 +290,7 @@ class Worker:
                 ):
                     if not self._library_is_clean():
                         return self._wait_for_publication_review(work_id, "dirty-library-worktree")
-                    published = self._publish_ready(work_id, maintainer)
+                    published = self._publish_authorized(work_id, maintainer, payload)
                     self._record_publication(work_id, published)
                     self.store.transition(self.settings.project, work_id, "succeeded", self.owner)
                     return {
@@ -373,7 +376,7 @@ class Worker:
                     if payload.get("authorized_publication"):
                         if not self._library_is_clean():
                             return self._wait_for_publication_review(work_id, "dirty-library-worktree")
-                        published = self._publish_ready(work_id, maintainer)
+                        published = self._publish_authorized(work_id, maintainer, payload)
                         self._record_publication(work_id, published)
                 self.store.transition(self.settings.project, work_id, "succeeded", self.owner)
                 return {
@@ -738,6 +741,16 @@ class Worker:
 
     def _record_publication(self, work_id: str, published: dict) -> None:
         publication_id = f"publication_{self.store.digest([work_id, 'succeeded'])[:24]}"
+        work = self.store.work(self.settings.project, work_id)
+        work_payload = json.loads(work["payload"]) if work else {}
+        authorization = work_payload.get("publication_authorization") or {}
+        lineage = {
+            "publication_id": publication_id,
+            "authorization_id": authorization.get("authorization_id"),
+            "review_id": authorization.get("review_id"),
+            "candidate_ids": authorization.get("candidate_ids", published.get("published", [])),
+            "human_intervention": bool(authorization),
+        }
         self.store.db.execute(
             "INSERT INTO publication_history"
             "(id,project,work_id,status,digest,created_at) "
@@ -759,14 +772,30 @@ class Worker:
             "work",
             "publication-succeeded",
             item_id=work_id,
-            payload={"publication_id": publication_id},
+            payload=lineage,
             commit=False,
         )
+        if authorization:
+            append_event(
+                self.store,
+                self.settings.project,
+                "review",
+                "human-intervention",
+                item_id=work_id,
+                actor_class="human",
+                payload={
+                    "action": "publication-authorized",
+                    "authorization_id": authorization.get("authorization_id"),
+                    "review_id": authorization.get("review_id"),
+                    "candidate_ids": authorization.get("candidate_ids", []),
+                },
+                commit=False,
+            )
         self.store.event(
             work_id,
             self.owner,
             "publication-succeeded",
-            {"publication_id": publication_id},
+            lineage,
             self.settings.project,
         )
         self.store.db.commit()
@@ -819,6 +848,23 @@ class Worker:
     ) -> dict:
         try:
             return maintainer.publish_ready()
+        except Exception as exc:
+            self._record_publication_failure(work_id, exc)
+            raise
+
+    def _publish_authorized(
+        self,
+        work_id: str,
+        maintainer: MaintainerApplicationService,
+        payload: dict,
+    ) -> dict:
+        authorization = payload.get("publication_authorization")
+        if not isinstance(authorization, dict):
+            error = ValueError("explicit publication authorization envelope is required")
+            self._record_publication_failure(work_id, error)
+            raise error
+        try:
+            return maintainer.publish_authorized(authorization)
         except Exception as exc:
             self._record_publication_failure(work_id, exc)
             raise

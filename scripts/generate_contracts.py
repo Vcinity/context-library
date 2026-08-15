@@ -27,6 +27,7 @@ from context_library_core.maintainer_contracts import (
     Finding,
     HarvestBatch,
     Observation,
+    PublicationAuthorization,
     SourceEnvelope,
 )
 from context_library_core.manager_contracts import ProposalSubmission, SessionIdentity
@@ -58,6 +59,7 @@ MODELS: dict[str, Type[BaseModel]] = {
     "manager-session-v1": SessionIdentity,
     "missing-context-notice-v1": MissingContextNotice,
     "observation-v1": Observation,
+    "publication-authorization-v1": PublicationAuthorization,
     "retrieval-benchmark-gold-v1": RetrievalBenchmarkGold,
     "retrieval-benchmark-report-v1": RetrievalBenchmarkReport,
     "retrieval-benchmark-task-v1": RetrievalBenchmarkTask,

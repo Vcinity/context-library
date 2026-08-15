@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from context_library_maintainer.cli import app
 from context_library_maintainer.config import ConfigError, project_files, resolve_config, scaffold
-from context_library_maintainer.models import Candidate, Observation, SourceEnvelope, safe_error
+from context_library_maintainer.models import Candidate, Observation, SourceEnvelope, digest, safe_error
 from context_library_maintainer.publish import PublicationError, _write_recovery, publish
 from context_library_maintainer.reconcile import reconcile
 from context_library_maintainer.service import (
@@ -86,6 +86,88 @@ def ready_publication(tmp_path: Path) -> tuple[State, dict, Path]:
     state.add_candidate(Candidate.model_validate(candidate_payload("obs-private")))
     assert reconcile(state, settings)["ready"] == ["private-product"]
     return state, settings, library
+
+
+def authorization_for(candidate: Candidate, *, authorization_id: str = "auth-1") -> dict:
+    return {
+        "schema": "context-library/publication-authorization",
+        "schema_version": 1,
+        "authorization_id": authorization_id,
+        "project": candidate.project,
+        "candidate_ids": [candidate.candidate_id],
+        "candidate_digests": {candidate.candidate_id: digest(candidate.model_dump(mode="json", by_alias=True))},
+        "review_id": "review-1",
+        "review_revision": "review-revision-1",
+        "actor": "human:administrator",
+        "capability": "publication:authorize",
+        "policy_revision": "1",
+        "idempotency_key": "approval-1",
+        "replay_identity": authorization_id,
+        "issued_at": "2026-07-28T00:00:00Z",
+        "expires_at": "2099-07-28T00:00:00Z",
+    }
+
+
+def test_explicit_authorization_publishes_with_automatic_policy_disabled(tmp_path):
+    state, settings, library = ready_publication(tmp_path)
+    candidate = Candidate.model_validate_json(
+        state.db.execute("SELECT payload_json FROM candidates WHERE id='private-product'").fetchone()[0]
+    )
+    unrelated = candidate.model_copy(
+        update={"candidate_id": "other-product", "subject": "Other product", "decision": "Keep other product separate."}
+    )
+    state.add_candidate(unrelated)
+    assert reconcile(state, settings)["ready"] == ["other-product"]
+    config_path = library / "projects/demo/maintainer.yaml"
+    config = yaml.safe_load(config_path.read_text())
+    config["policies"]["automatic_publication"] = False
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False))
+    service = MaintainerApplicationService(
+        MaintainerContext(
+            library_root=settings["library_root"],
+            state_root=settings["state_root"],
+            project="demo",
+            actor="worker:publication",
+            policy_revision="1",
+        )
+    )
+    result = service.publish_authorized(authorization_for(candidate))
+    assert result["published"] == [candidate.candidate_id]
+    replay = service.publish_authorized(authorization_for(candidate))
+    assert replay["idempotent"] is True
+    assert (
+        state.db.execute("SELECT state FROM candidates WHERE id=?", (candidate.candidate_id,)).fetchone()[0]
+        == "published"
+    )
+    assert (
+        state.db.execute("SELECT state FROM candidates WHERE id=?", (unrelated.candidate_id,)).fetchone()[0]
+        == "ready"
+    )
+    assert yaml.safe_load(config_path.read_text())["policies"]["automatic_publication"] is False
+
+
+def test_authorization_digest_mismatch_does_not_mutate_candidate(tmp_path):
+    state, settings, _ = ready_publication(tmp_path)
+    candidate = Candidate.model_validate_json(
+        state.db.execute("SELECT payload_json FROM candidates WHERE id='private-product'").fetchone()[0]
+    )
+    authorization = authorization_for(candidate)
+    authorization["candidate_digests"][candidate.candidate_id] = "wrong-digest"
+    service = MaintainerApplicationService(
+        MaintainerContext(
+            library_root=settings["library_root"],
+            state_root=settings["state_root"],
+            project="demo",
+            actor="worker:publication",
+            policy_revision="1",
+        )
+    )
+    with pytest.raises(ValueError, match="candidate digest"):
+        service.publish_authorized(authorization)
+    assert (
+        state.db.execute("SELECT state FROM candidates WHERE id=?", (candidate.candidate_id,)).fetchone()[0]
+        == "ready"
+    )
 
 
 def git_init(root: Path) -> str:

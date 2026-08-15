@@ -244,11 +244,12 @@ def _recover_committed_publication(
         if existing is None:
             state.db.execute(
                 "INSERT INTO publications(project, run_id, phase, digest, payload_json, created_at) "
-                "VALUES (?, ?, 'published', ?, '{}', ?)",
+                "VALUES (?, ?, 'published', ?, ?, ?)",
                 (
                     project,
                     str(publication.get("run_id", "")),
                     digest,
+                    json.dumps(publication.get("authorization", {}), sort_keys=True),
                     timestamp(
                         __import__(
                             "context_library_maintainer.models",
@@ -263,6 +264,7 @@ def _recover_committed_publication(
         "changed": True,
         "digest": digest,
         "indexes": publication.get("indexes", []),
+        "authorization": publication.get("authorization", {}),
         "recovered": True,
     }
 
@@ -495,7 +497,13 @@ def _publish_locked(
     recovered = _recover_interrupted(state, settings, project)
     if recovered is not None:
         return recovered
-    candidates = [Candidate.model_validate_json(row["payload_json"]) for row in state.candidates(project, "ready")]
+    authorized_ids = settings.get("authorized_candidate_ids")
+    authorized_set = set(authorized_ids or [])
+    candidates = [
+        Candidate.model_validate_json(row["payload_json"])
+        for row in state.candidates(project, "ready")
+        if not authorized_set or row["id"] in authorized_set
+    ]
     register = root / config.register
     original = register.read_bytes() if register.exists() else b"# Decision Register\n\n"
     additions = []
@@ -505,7 +513,7 @@ def _publish_locked(
             for row in state.observations(candidate.source_observation_ids, candidate.project)
         ]
         additions.append(_record(candidate, observations, settings["actor"]))
-    open_conflicts = list(
+    open_conflicts = [] if authorized_set else list(
         state.db.execute(
             "SELECT id, payload_json FROM conflicts WHERE project=? AND status='open' ORDER BY id", (project,)
         )
@@ -587,6 +595,7 @@ def _publish_locked(
                             "digest": library_digest,
                             "indexes": sorted(indexes),
                             "run_id": settings.get("run_id", ""),
+                            "authorization": settings.get("publication_metadata", {}),
                         },
                     )
                     for path, content in targets.items():
@@ -661,11 +670,12 @@ def _publish_locked(
                             state.transition(candidate.candidate_id, "published")
                         state.db.execute(
                             "INSERT INTO publications(project, run_id, phase, digest, payload_json, created_at) "
-                            "VALUES (?, ?, 'published', ?, '{}', ?)",
+                            "VALUES (?, ?, 'published', ?, ?, ?)",
                             (
                                 project,
                                 settings.get("run_id", ""),
                                 library_digest,
+                                json.dumps(settings.get("publication_metadata", {}), sort_keys=True),
                                 timestamp(
                                     __import__(
                                         "context_library_maintainer.models",

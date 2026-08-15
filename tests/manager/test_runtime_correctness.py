@@ -505,7 +505,7 @@ def test_publication_exception_creates_linked_safe_history_and_audit(
         def reconcile(self, _candidate_id):
             return {"status": "ok", "ready": ["candidate-one"]}
 
-        def publish_ready(self):
+        def publish_authorized(self, _authorization):
             raise PublicationExplosion("token=must-not-be-durable")
 
     settings = settings_for(tmp_path)
@@ -519,7 +519,8 @@ def test_publication_exception_creates_linked_safe_history_and_audit(
                 "schema_version": 1,
                 "candidate_id": "candidate-one",
             },
-            "authorized_publication": True,
+                "authorized_publication": True,
+                "publication_authorization": {"authorization_id": "auth-publication-failure"},
         },
         "human:admin",
     )
