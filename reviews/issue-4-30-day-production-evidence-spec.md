@@ -30,7 +30,10 @@ start/end, required producers, per-project sequence ranges and watermarks,
 heartbeat intervals, intake-accepted cohort items, effective policy revision
 and eligibility classification, work/review/policy/agent-invocation/notification
 event lineage, replay reconciliation result, coverage gaps, and safe redacted
-operator provenance. It MUST report numerator, denominator, exclusions,
+operator provenance. It MUST report numerator, denominator, exclusions, and
+all rates and counts segmented by effective policy revision; carried-in items
+retain their original policy revision.
+It MUST report
 deterministic-only completion rate, cache-only semantic completion rate,
 model-assisted completion rate, agent cache-hit rate, duplicate-work rate,
 median and p95 time-to-terminal-outcome,
@@ -39,14 +42,17 @@ percentage of items deferred by budget, tokens-per-item, and cost-per-decision.
 The bundle MUST also report agent invocation rate, reasons, and counts.
 Missing evidence for any
 MUST-report field is itself a named coverage gap and forces
-`insufficient-telemetry`; it is never silently omitted.
+`insufficient-telemetry`; it is never silently omitted. Agent calls MUST be
+counted per unique invocation and per unique eligible item so retries cannot
+obscure usage.
 
 The dashboard/API MUST preserve SPEC.md precedence:
 `insufficient-telemetry` > `insufficient-history` > `no-data` > `met` >
 `missed`. A coverage gap overlapping the window prevents an achieved SLO.
 An otherwise complete-history and complete-telemetry window with a zero
 denominator MUST report no autonomy rate and `slo_state: no-data`, never
-`met`.
+`met`. `slo_state: met` additionally requires an autonomy rate of at least
+0.95 and an inappropriate agent-invocation count of exactly zero.
 The report MUST distinguish synthetic/local validation from production status
 and expose producer, interval, reason, and reconciliation state for each gap.
 
