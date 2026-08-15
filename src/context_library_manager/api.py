@@ -2774,6 +2774,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             },
         )
 
+    @app.get("/api/v1/projects/{project}/autonomy/evidence")
+    def autonomy_evidence(project: str, request: Request):
+        require_project(request, project)
+        from .telemetry import production_evidence_bundle
+
+        bundle = production_evidence_bundle(app.state.store, project, window_days=30, production=True)
+        return envelope(request, data=bundle)
+
     def page_context(request: Request, title: str, project: str | None = None) -> dict:
         principal = request.state.principal
         project = project or selected_project(request)

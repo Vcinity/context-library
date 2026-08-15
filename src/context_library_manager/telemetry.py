@@ -23,6 +23,8 @@ QUALIFYING_HUMAN_EVENTS = {
     "terminal-override",
 }
 DEFAULT_PRODUCERS = ("work", "review", "policy", "agent", "notification")
+EVIDENCE_PRODUCERS = ("work", "review", "policy", "agent-invocation", "notification")
+EVIDENCE_PRODUCER_ALIASES = {"agent": "agent-invocation"}
 
 
 def _utc(value: datetime | str | None = None) -> str:
@@ -600,6 +602,7 @@ def autonomy_metrics(
     retry_count = 0
     duplicate_count = 0
     escalation_reasons: Counter[str] = Counter()
+    invocation_reasons: Counter[str] = Counter()
     deferred_budget_items: set[str] = set()
     published_items: set[str] = set()
 
@@ -641,6 +644,7 @@ def autonomy_metrics(
                 unique_invocations.add(invocation_id)
                 invocation_items.add(item_id)
                 item_invocations += 1
+                invocation_reasons[str(event["payload"].get("reason", "unspecified"))] += 1
                 inappropriate_invocations += int(bool(event["payload"].get("inappropriate")))
                 tokens += int(event["payload"].get("tokens", 0))
                 cost += float(event["payload"].get("cost", 0))
@@ -693,6 +697,12 @@ def autonomy_metrics(
         (project,),
     ).fetchone()
     result = {
+        "production": production,
+        "cohort_item_ids": sorted(cohort),
+        "cohort_rule": (
+            "intake-accepted in window plus unresolved at window start; "
+            "items resolved before window start excluded"
+        ),
         "numerator": numerator,
         "denominator": denominator,
         "exclusions": len(excluded),
@@ -718,12 +728,15 @@ def autonomy_metrics(
         "agent_invocation_items": len(invocation_items),
         "agent_invocation_rate": len(invocation_items) / denominator if denominator else None,
         "unique_invocation_rate": len(unique_invocations) / denominator if denominator else None,
+        "agent_invocation_reasons": dict(sorted(invocation_reasons.items())),
         "inappropriate_agent_invocations": inappropriate_invocations,
         "cache_hits": sum(event["event_type"] == "cache-hit" for item in eligible.values() for event in item["events"]),
         "tokens": tokens,
         "tokens_per_eligible_item": tokens / denominator if denominator else None,
+        "tokens_per_item": tokens / denominator if denominator else None,
         "cost": cost,
         "cost_per_published_decision": cost / len(published_items) if published_items else None,
+        "cost_per_decision": cost / denominator if denominator else None,
         "human_escalation_rate": (
             sum(
                 1
@@ -843,3 +856,104 @@ def autonomy_metrics(
     )
     store.db.commit()
     return result
+
+
+def production_evidence_bundle(
+    store,
+    project: str,
+    *,
+    window_end: datetime | str | None = None,
+    window_days: int = 30,
+    production: bool = True,
+) -> dict[str, Any]:
+    """Return the redaction-safe, verifier-facing production evidence bundle."""
+    metrics = autonomy_metrics(
+        store,
+        project,
+        window_end=window_end,
+        window_days=window_days,
+        production=production,
+    )
+    manifest = store.db.execute(
+        "SELECT revision,required_producers,effective_at FROM telemetry_manifests "
+        "WHERE project=? AND effective_at<=? ORDER BY effective_at DESC LIMIT 1",
+        (project, metrics["window_end"]),
+    ).fetchone()
+    required = []
+    manifest_effective = None
+    manifest_revision = None
+    if manifest:
+        required = sorted(
+            {EVIDENCE_PRODUCER_ALIASES.get(item, item) for item in json.loads(manifest["required_producers"])}
+        )
+        manifest_effective = manifest["effective_at"]
+        manifest_revision = manifest["revision"]
+    events = store.db.execute(
+        "SELECT producer,producer_sequence,occurred_at,event_type FROM telemetry_events "
+        "WHERE project=? AND occurred_at>=? AND occurred_at<=? ORDER BY project_sequence",
+        (project, metrics["window_start"], metrics["window_end"]),
+    ).fetchall()
+    sequence_ranges: dict[str, dict[str, int]] = {}
+    heartbeat_intervals: dict[str, float | None] = {}
+    for raw_producer in {row["producer"] for row in events} | set(required):
+        producer = EVIDENCE_PRODUCER_ALIASES.get(raw_producer, raw_producer)
+        producer_events = [
+            row
+            for row in events
+            if EVIDENCE_PRODUCER_ALIASES.get(row["producer"], row["producer"]) == producer
+        ]
+        sequences = [int(row["producer_sequence"]) for row in producer_events]
+        if sequences:
+            sequence_ranges[producer] = {"first": min(sequences), "last": max(sequences), "count": len(sequences)}
+        heartbeat_times = sorted(
+            _parse(row["occurred_at"])
+            for row in producer_events
+            if row["event_type"] == "heartbeat"
+        )
+        heartbeat_intervals[producer] = (
+            max((right - left).total_seconds() for left, right in zip(heartbeat_times, heartbeat_times[1:]))
+            if len(heartbeat_times) > 1
+            else None
+        )
+    watermarks = {
+        EVIDENCE_PRODUCER_ALIASES.get(row["producer"], row["producer"]): int(row["producer_sequence"])
+        for row in store.db.execute(
+            "SELECT producer,producer_sequence FROM telemetry_watermarks WHERE project=?", (project,)
+        )
+    }
+    return {
+        "schema": "context-library/production-evidence-bundle",
+        "schema_version": 1,
+        "project": project,
+        "production": production,
+        "manifest": {
+            "revision": manifest_revision,
+            "effective_at": manifest_effective,
+            "required_producers": required,
+            "immutable_for_window": True,
+        },
+        "window": {
+            "start": metrics["window_start"],
+            "end": metrics["window_end"],
+            "days": window_days,
+        },
+        "cohort": {
+            "item_ids": metrics["cohort_item_ids"],
+            "rule": metrics["cohort_rule"],
+        },
+        "telemetry": {
+            "status": metrics["telemetry_status"],
+            "coverage_gaps": metrics["coverage_gaps"],
+            "sequence_ranges": sequence_ranges,
+            "watermarks": watermarks,
+            "heartbeat_intervals_seconds": heartbeat_intervals,
+            "replay_reconciled": not any(
+                "replay-reconciliation" in str(gap.get("reason", "")) for gap in metrics["coverage_gaps"]
+            ),
+        },
+        "history": {
+            "status": metrics["history_status"],
+            "production_window": production,
+        },
+        "metrics": metrics,
+    }
