@@ -1,0 +1,116 @@
+{
+  "additionalProperties": false,
+  "description": "Manager-issued, exact-scope authorization for one publication attempt.",
+  "properties": {
+    "actor": {
+      "maxLength": 512,
+      "minLength": 1,
+      "title": "Actor",
+      "type": "string"
+    },
+    "authorization_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Authorization Id",
+      "type": "string"
+    },
+    "candidate_digests": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "maxProperties": 1000,
+      "minProperties": 1,
+      "title": "Candidate Digests",
+      "type": "object"
+    },
+    "candidate_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Candidate Ids",
+      "type": "array"
+    },
+    "capability": {
+      "const": "publication:authorize",
+      "default": "publication:authorize",
+      "title": "Capability",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "issued_at": {
+      "format": "date-time",
+      "title": "Issued At",
+      "type": "string"
+    },
+    "policy_revision": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Policy Revision",
+      "type": "string"
+    },
+    "project": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Project",
+      "type": "string"
+    },
+    "replay_identity": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Replay Identity",
+      "type": "string"
+    },
+    "review_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Review Id",
+      "type": "string"
+    },
+    "review_revision": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Review Revision",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/publication-authorization",
+      "default": "context-library/publication-authorization",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "authorization_id",
+    "project",
+    "candidate_ids",
+    "candidate_digests",
+    "review_id",
+    "review_revision",
+    "actor",
+    "policy_revision",
+    "idempotency_key",
+    "replay_identity",
+    "issued_at",
+    "expires_at"
+  ],
+  "title": "PublicationAuthorization",
+  "type": "object"
+}

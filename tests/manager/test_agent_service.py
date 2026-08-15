@@ -108,7 +108,31 @@ def test_publication_intent_requires_admin_review_and_authorizes_requeued_work(t
         "demo",
         "candidate_task",
         "publication-approval",
-        {"publication_intent": True, "authorized_publication": False},
+        {
+            "publication_intent": True,
+            "authorized_publication": False,
+            "clm_payload": {
+                "schema": "context-library/candidate",
+                "schema_version": 1,
+                "project": "demo",
+                "candidate_id": "publication-candidate",
+                "subject": "Publication candidate",
+                "category": "product",
+                "decision": "Use the approved candidate.",
+                "rationale": "Administrator review approved it.",
+                "decisionmaker": {"identity": "human:fixture:admin", "display_name": "Administrator"},
+                "decision_at": "2026-07-28T00:00:00Z",
+                "provenance": "explicit",
+                "derivation": "direct",
+                "source_observation_ids": [],
+                "applicability": {
+                    "provenance": "explicit",
+                    "confidence": 1,
+                    "evidence_observation_ids": [],
+                    "reasoning": "test",
+                },
+            },
+        },
         "runtime:test",
     )
     store.transition("demo", work_id, "leased", "worker")
@@ -138,11 +162,17 @@ def test_publication_intent_requires_admin_review_and_authorizes_requeued_work(t
     payload = json.loads(work["payload"])
     assert payload["authorized_publication"] is True
     assert payload["human_resolution"] == "adopt-candidate"
+    authorization = payload["publication_authorization"]
+    assert authorization["schema"] == "context-library/publication-authorization"
+    assert authorization["candidate_ids"] == ["publication-candidate"]
+    assert authorization["actor"] == "human:fixture:admin"
+    assert authorization["capability"] == "publication:authorize"
     audit = store.db.execute(
         "SELECT payload FROM audit_events WHERE work_id=? AND event_type='publication-authorized'",
         (work_id,),
     ).fetchone()
     assert json.loads(audit["payload"])["capability"] == "admin"
+    assert json.loads(audit["payload"])["publication_capability"] == "publication:authorize"
 
 
 def test_immediate_drain_replay_returns_final_paused_version(tmp_path):

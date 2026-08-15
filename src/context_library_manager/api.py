@@ -11,7 +11,7 @@ import secrets
 import threading
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Annotated
 from urllib.parse import parse_qs, urlencode
@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from context_library_core.maintainer_contracts import HarvestBatch
+from context_library_core.maintainer_contracts import Candidate, HarvestBatch, PublicationAuthorization, digest
 
 from .agent_service import (
     ServiceConflict,
@@ -769,12 +769,62 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         payload["human_resolution_rationale"] = resolution.rationale
         payload["human_resolver"] = actor
         if resolution.choice == "adopt-candidate" and payload.get("publication_intent"):
+            current_policy = app.state.store.db.execute(
+                "SELECT revision FROM policy_revisions WHERE project=? "
+                "ORDER BY CAST(revision AS INTEGER) DESC,created_at DESC LIMIT 1",
+                (project,),
+            ).fetchone()
+            if current_policy and str(payload.get("policy_revision", "1")) != str(current_policy["revision"]):
+                raise HTTPException(
+                    409,
+                    {
+                        "code": "stale-publication-authorization",
+                        "message": "project policy changed; the review must be re-evaluated",
+                    },
+                )
             payload["authorized_publication"] = True
+            candidate_payload = payload.get("clm_payload")
+            if isinstance(candidate_payload, dict) and candidate_payload.get("candidate_id"):
+                candidate = Candidate.model_validate(candidate_payload)
+                issued_at = datetime.now(timezone.utc).replace(microsecond=0)
+                review_revision = app.state.store.digest(
+                    {
+                        "review_id": review_row["id"],
+                        "resolution": resolution.model_dump(mode="json"),
+                    }
+                )
+                authorization_id = "publication_auth_" + app.state.store.digest(
+                    [project, review_row["id"], actor, resolution.idempotency_key]
+                )[:24]
+                envelope = PublicationAuthorization(
+                    authorization_id=authorization_id,
+                    project=project,
+                    candidate_ids=[candidate.candidate_id],
+                    candidate_digests={
+                        candidate.candidate_id: digest(candidate.model_dump(mode="json", by_alias=True))
+                    },
+                    review_id=review_row["id"],
+                    review_revision=review_revision,
+                    actor=actor,
+                    policy_revision=str(payload.get("policy_revision", "1")),
+                    idempotency_key=resolution.idempotency_key,
+                    replay_identity=authorization_id,
+                    issued_at=issued_at,
+                    expires_at=issued_at + timedelta(minutes=15),
+                )
+                payload["publication_authorization"] = envelope.model_dump(mode="json", by_alias=True)
             app.state.store.event(
                 review_row["work_id"],
                 actor,
                 "publication-authorized",
-                {"review_id": review_row["id"], "capability": Capability.ADMIN.value},
+                {
+                    "review_id": review_row["id"],
+                    "capability": Capability.ADMIN.value,
+                    "publication_capability": "publication:authorize",
+                    "authorization_id": payload.get("publication_authorization", {}).get("authorization_id"),
+                    "candidate_ids": payload.get("publication_authorization", {}).get("candidate_ids", []),
+                    "policy_revision": payload.get("policy_revision"),
+                },
                 project,
             )
         app.state.store.db.execute(

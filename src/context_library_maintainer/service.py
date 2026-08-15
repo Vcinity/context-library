@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import monotonic
 from typing import Any, Callable
+
+from context_library_core.maintainer_contracts import PublicationAuthorization
 
 from .config import ConfigError, project_files, resolve_config, safe_path, scaffold
 from .ingest import ingest
@@ -37,6 +39,7 @@ class MaintainerContext:
     actor: str
     timeout_seconds: float = 30.0
     cancelled: Callable[[], bool] | None = None
+    policy_revision: str | None = None
 
 
 class MaintainerCancelledError(RuntimeError):
@@ -386,6 +389,92 @@ class MaintainerApplicationService:
             self._boundary(started)
             state.run_end(run_id, "ok")
             return {"run_id": run_id, **data}
+        except Exception as exc:
+            state.run_end(run_id, "error", type(exc).__name__)
+            raise
+        finally:
+            state.db.close()
+
+    def publish_authorized(
+        self, authorization: dict[str, Any], *, no_commit: bool = False
+    ) -> dict[str, Any]:
+        """Publish exactly the Manager-approved candidate set.
+
+        This boundary deliberately does not consult the automatic-publication
+        policy. The authorization envelope is the separate authority, while
+        all candidate, project, digest, policy, and expiry checks remain
+        mandatory before the canonical write.
+        """
+        envelope = PublicationAuthorization.model_validate(authorization)
+        if envelope.project != self.context.project:
+            raise ValueError("publication authorization project does not match service context")
+        if envelope.actor.startswith("agent:"):
+            raise ValueError("publication authorization requires a human approving actor")
+        if envelope.capability != "publication:authorize":
+            raise ValueError("publication authorization capability is invalid")
+        if self.context.policy_revision is not None and envelope.policy_revision != self.context.policy_revision:
+            raise ValueError("publication authorization policy revision is stale")
+        now = datetime.now(timezone.utc)
+        if envelope.expires_at <= now:
+            raise ValueError("publication authorization has expired")
+
+        state = self._state()
+        run_id, started = self._run(state, "publish authorized", envelope.authorization_id)
+        try:
+            rows = {
+                row["id"]: row
+                for row in state.db.execute(
+                    "SELECT id,project,payload_json,state FROM candidates WHERE project=? AND id IN ({})".format(
+                        ",".join("?" for _ in envelope.candidate_ids)
+                    ),
+                    (self.context.project, *envelope.candidate_ids),
+                )
+            }
+            missing = [candidate_id for candidate_id in envelope.candidate_ids if candidate_id not in rows]
+            if missing:
+                raise ValueError("publication authorization references unknown candidate")
+            for candidate_id in envelope.candidate_ids:
+                candidate = Candidate.model_validate_json(rows[candidate_id]["payload_json"])
+                if digest(candidate.model_dump(mode="json", by_alias=True)) != envelope.candidate_digests[candidate_id]:
+                    raise ValueError("publication authorization candidate digest does not match")
+                if rows[candidate_id]["state"] not in {"ready", "published"}:
+                    raise ValueError("publication authorization candidate is not ready")
+            published = [
+                candidate_id
+                for candidate_id in envelope.candidate_ids
+                if rows[candidate_id]["state"] == "published"
+            ]
+            if len(published) == len(envelope.candidate_ids):
+                prior = state.db.execute(
+                    "SELECT payload_json,digest FROM publications WHERE project=? AND phase='published' "
+                    "AND payload_json LIKE ? ORDER BY id DESC LIMIT 1",
+                    (self.context.project, f'%{envelope.authorization_id}%'),
+                ).fetchone()
+                if prior:
+                    data = json.loads(prior["payload_json"])
+                    data.update(
+                        {
+                            "published": envelope.candidate_ids,
+                            "changed": False,
+                            "digest": prior["digest"],
+                            "idempotent": True,
+                        }
+                    )
+                    state.run_end(run_id, "ok", touched=envelope.candidate_ids)
+                    return {"run_id": run_id, **data}
+                raise ValueError("published candidate has no matching authorization lineage")
+            settings = self._settings()
+            settings.update(
+                {
+                    "run_id": run_id,
+                    "authorized_candidate_ids": envelope.candidate_ids,
+                    "publication_metadata": envelope.model_dump(mode="json", by_alias=True),
+                }
+            )
+            data = publish(state, settings, ready_only=True, no_commit=no_commit)
+            self._boundary(started)
+            state.run_end(run_id, "ok", touched=envelope.candidate_ids)
+            return {"run_id": run_id, **data, "authorization_id": envelope.authorization_id}
         except Exception as exc:
             state.run_end(run_id, "error", type(exc).__name__)
             raise
