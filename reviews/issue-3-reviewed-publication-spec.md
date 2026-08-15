@@ -22,15 +22,20 @@ alter unrelated proposal/reconciliation behavior.
 The typed Maintainer service accepts a versioned publication authorization
 request with `schema: context-library/publication-authorization` and
 `schema_version: 1`. The envelope contains project, exact candidate IDs and
-their candidate digests, review ID and approved review revision, the named
-`publication:authorize` actor capability, policy revision, expiration/replay
-identity, and idempotency key. It rejects missing, stale, denied, revoked,
+their candidate digests, review ID and approved review revision, the approving
+actor's identity and the named `publication:authorize` capability, policy
+revision, expiration/replay identity, and idempotency key. It rejects missing,
+stale, denied, revoked,
 cross-project, mismatched, expired, reused, or broadened authorizations before
 any canonical write. The Manager creates the request only after an audited
 approval and binds the exact values; the Maintainer records the authorization
 lineage in the publication audit. Automatic workers cannot consume this human
 authorization. A review revoked before first use is rejected and leaves
 canonical bytes unchanged.
+
+An authorization is stale if the project's current policy revision differs from
+the revision recorded at approval time, independent of the
+`automatic_publication` value itself.
 
 Publication remains atomic, idempotent for the exact request, and scoped to the
 owning project. Retry/recovery reuses only the exact authorization lineage and
