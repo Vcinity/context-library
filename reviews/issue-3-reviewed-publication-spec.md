@@ -20,19 +20,25 @@ alter unrelated proposal/reconciliation behavior.
 ## Contract and authority design
 
 The typed Maintainer service accepts a versioned publication authorization
-request containing project, exact candidate IDs and their candidate digests,
-review ID and approved review revision, authorizing actor/capability, policy
-revision, expiration/replay identity, and idempotency key. It rejects missing,
-stale, denied, cross-project, mismatched, expired, reused, or broadened
-authorizations before any canonical write. The Manager creates the request
-only after an audited approval and binds the exact values; the Maintainer
-records the authorization lineage in the publication audit. Automatic workers
-cannot consume this human authorization.
+request with `schema: context-library/publication-authorization` and
+`schema_version: 1`. The envelope contains project, exact candidate IDs and
+their candidate digests, review ID and approved review revision, the named
+`publication:authorize` actor capability, policy revision, expiration/replay
+identity, and idempotency key. It rejects missing, stale, denied, revoked,
+cross-project, mismatched, expired, reused, or broadened authorizations before
+any canonical write. The Manager creates the request only after an audited
+approval and binds the exact values; the Maintainer records the authorization
+lineage in the publication audit. Automatic workers cannot consume this human
+authorization. A review revoked before first use is rejected and leaves
+canonical bytes unchanged.
 
 Publication remains atomic, idempotent for the exact request, and scoped to the
 owning project. Retry/recovery reuses only the exact authorization lineage and
 never requires broadening its candidate set. `automatic_publication` remains
-false before, during, and after an explicitly authorized publication.
+false before, during, and after an explicitly authorized publication. Each
+mutating audit record includes actor, project, operation, input identity,
+policy revision, result, affected records, and a safe error classification;
+rejections record the same fields without secret evidence.
 
 ## Affected components
 
@@ -70,5 +76,6 @@ smoke checks. Tests use synthetic repositories and offline local fakes only.
 Risks are authorization replay, candidate-set widening, accidental policy
 toggle, and audit lineage loss during recovery. Every rejection must be
 observable with a safe error classification and must leave canonical bytes
-unchanged. There are no unresolved contract questions; token/credential
-handling follows existing redaction rules. This checkpoint contains no code.
+unchanged. The implementation must preserve the named schema and capability
+as stable contract identifiers; token/credential handling follows existing
+redaction rules. This checkpoint contains no code.
