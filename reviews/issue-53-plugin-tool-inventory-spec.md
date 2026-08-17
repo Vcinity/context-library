@@ -6,7 +6,8 @@ Status: Draft specification checkpoint; implementation is not approved by this a
 ## Scope
 
 Synchronize the public Plugin README and usage guidance with every registered
-MCP tool, including `get_task_context` and `read_decision_audit`, and add a
+MCP tool, including the README inventory entry for `get_task_context` and the
+missing usage example for `read_decision_audit`, and add a
 deterministic documentation consistency check that fails when a registered tool
 is omitted or an undocumented inventory entry is added.
 
@@ -36,10 +37,11 @@ unknown names, and verifies that the usage reference contains required example
 sections for every tool. Keep prose descriptions human-maintained and avoid
 copying private deployment details.
 
-Add concise valid examples for `get_task_context` using the complete tokenizer
-contract and for `read_decision_audit` using its schema, project, and selected
-decision IDs. Link search semantics to #52's documented exact/lexical behavior
-without reimplementing it here.
+Retain the existing complete `get_task_context` usage examples and add a
+concise valid `read_decision_audit` example in the same `usage.md` per-tool
+pattern, using its schema, project, and selected decision IDs. Link search
+semantics to #52's documented exact/lexical behavior without reimplementing it
+here.
 
 ## Affected files and components
 
@@ -81,8 +83,8 @@ git diff --check
 - Whether the inventory block should be generated entirely or remain
   human-maintained with a checker; the proposed minimal block preserves readable
   documentation while enforcing names.
-- Which documentation file owns full per-tool examples when #52 and #56 have
-  already added usage sections; implementation must avoid duplicate examples.
+- README owns the marked name/purpose inventory; `usage.md` owns full per-tool
+  examples, following the existing `get_task_context` pattern.
 
 ## Independent review record
 
