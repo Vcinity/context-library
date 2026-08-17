@@ -40,7 +40,8 @@ complete-substring match first; then number
 of distinct query terms present in the searchable decision fields; then stable
 decision-register order and `decision_id` as a final tie-break. Return the
 existing match fields plus machine-readable `match_mode`, `matched_terms`,
-`diagnostic`, `superseded`, `superseded_by`, and an applicability state
+`diagnostic`, `superseded`, `superseded_by` (a list of decision IDs, empty when
+not superseded), and an applicability state
 (`unconditional`, `satisfied`, `undetermined`, or `unsatisfied`) for every
 match. Return response-level `truncated` and `total_matches` fields so
 max-result omission is never silent. A compound query with term matches but no exact substring
@@ -60,6 +61,10 @@ fallback.
   deterministic generated-runtime inclusion.
 - `plugins/context-library/mcp/context_library_server.py`: search algorithm and
   response contract/schema.
+- `src/context_library_core/contracts.py` or the appropriate shared contract
+  module, `scripts/generate_contracts.py`, `contracts/schemas/`, and
+  `contracts/fixtures/`: named `context-library/search-decisions-response`
+  version 1 and its generated/checkable schema fixture.
 - `plugins/context-library/skills/context-library/references/usage.md`,
   `SKILL.md`, and Plugin README: query semantics/examples.
 - `tests/plugin/test_mcp_read_only.py` and packaged MCP smoke/subprocess tests:
@@ -107,9 +112,8 @@ git diff --check
   version 1), additive to the existing `matches` field. The implementation
   must decide only the exact field names and envelope placement; it cannot
   ship an unversioned diagnostic payload.
-- Whether all query terms must match for lexical fallback or partial coverage
-  should be returned with a coverage score; the implementation must choose one
-  and document it before code changes.
+- Which closed-form `match_mode` values and minimum matched-term threshold
+  best expose the already-decided score-based partial lexical coverage.
 - Whether existing README inventory work in #53 should own the final tool
   documentation section, requiring coordination without merging scopes.
 
