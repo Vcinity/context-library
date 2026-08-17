@@ -66,10 +66,33 @@ def test_insufficient_budget_is_truthful_and_never_silent():
     assert result.agent_visible_capsule.serialized_content == ""
 
 
-def test_unknown_tokenizer_is_separate_from_exact_budget_claim():
-    result = render_task_context(request(1000, unknown_tokenizer=True), items(), revision="rev-1")
-    assert result.coverage.budget_status == "unverified"
-    assert result.agent_visible_capsule.budget_status == "unverified"
+def test_unknown_tokenizer_is_rejected_before_rendering():
+    with pytest.raises(ValueError, match="unsupported tokenizer identity"):
+        render_task_context(request(1000, unknown_tokenizer=True), items(), revision="rev-1")
+
+
+def test_encoder_lookup_failure_is_rejected_without_raw_error(monkeypatch):
+    import context_library_core.task_context as task_context
+
+    def unavailable(_name):
+        raise OSError("private cache path")
+
+    monkeypatch.setattr(task_context.tiktoken, "get_encoding", unavailable)
+    with pytest.raises(ValueError, match="tokenizer encoder is unavailable") as error:
+        render_task_context(request(), items(), revision="rev-1")
+    assert "private cache path" not in str(error.value)
+
+
+def test_encoder_failure_during_counting_is_rejected(monkeypatch):
+    import context_library_core.task_context as task_context
+
+    class BrokenEncoder:
+        def encode(self, _capsule):
+            raise RuntimeError("raw encoder detail")
+
+    monkeypatch.setattr(task_context.tiktoken, "get_encoding", lambda _name: BrokenEncoder())
+    with pytest.raises(ValueError, match="tokenizer encoder is unavailable"):
+        render_task_context(request(), items(), revision="rev-1")
 
 
 def test_response_rejects_false_complete_coverage():

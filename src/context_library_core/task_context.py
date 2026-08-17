@@ -93,6 +93,41 @@ def _capsule(project: str, revision: str, items: list[TaskContextItem]) -> str:
     return "\n".join(lines) + "\n"
 
 
+_SUPPORTED_TOKENIZER = {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+}
+
+# Narrow, enumerated boundary for encoder resolution/lookup failures (missing
+# dependency, corrupt or unreachable encoding cache, unsupported platform).
+_ENCODER_FAILURE_EXCEPTIONS = (ImportError, OSError, RuntimeError, ValueError, LookupError)
+
+
+def _resolve_verified_encoder(tokenizer: TokenizerIdentity) -> "tiktoken.Encoding":
+    if (
+        tokenizer.name != _SUPPORTED_TOKENIZER["name"]
+        or tokenizer.version != _SUPPORTED_TOKENIZER["version"]
+        or tokenizer.vocabulary_revision != _SUPPORTED_TOKENIZER["vocabulary_revision"]
+    ):
+        raise ValueError(
+            "unsupported tokenizer identity: task-context accounting requires the packaged "
+            f"{_SUPPORTED_TOKENIZER['name']} {_SUPPORTED_TOKENIZER['version']} "
+            f"{_SUPPORTED_TOKENIZER['vocabulary_revision']} encoder"
+        )
+    try:
+        return tiktoken.get_encoding(_SUPPORTED_TOKENIZER["vocabulary_revision"])
+    except _ENCODER_FAILURE_EXCEPTIONS as exc:
+        raise ValueError("tokenizer encoder is unavailable") from exc
+
+
+def _count_tokens(encoder: "tiktoken.Encoding", capsule: str) -> int:
+    try:
+        return len(encoder.encode(capsule))
+    except _ENCODER_FAILURE_EXCEPTIONS as exc:
+        raise ValueError("tokenizer encoder is unavailable") from exc
+
+
 def render_task_context(
     request: TaskContextRequest,
     items: list[TaskContextItem],
@@ -107,16 +142,10 @@ def render_task_context(
     ]
     uncertainties = [item for item in ordered if item.state == ApplicabilityState.UNDETERMINED]
     non_operative = [item for item in ordered if item.state == ApplicabilityState.UNSATISFIED]
-    budget_status = (
-        "verified"
-        if request.tokenizer.name == "tiktoken"
-        and request.tokenizer.version == "0.9.0"
-        and request.tokenizer.vocabulary_revision == "cl100k_base"
-        else "unverified"
-    )
-    tokenizer = tiktoken.get_encoding("cl100k_base") if budget_status == "verified" else None
+    encoder = _resolve_verified_encoder(request.tokenizer)
+    budget_status = "verified"
     capsule = _capsule(request.project, revision, operative)
-    token_count = len(tokenizer.encode(capsule)) if tokenizer else 0
+    token_count = _count_tokens(encoder, capsule)
     omitted = []
     if token_count > request.agent_token_budget:
         omitted = [item.decision_id for item in operative]

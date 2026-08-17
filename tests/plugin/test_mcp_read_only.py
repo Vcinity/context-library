@@ -65,10 +65,10 @@ def test_every_advertised_mcp_tool_is_non_mutating(tmp_path, monkeypatch):
             "repository_scopes": ["plugins/context-library"],
             "agent_token_budget": 1000,
             "tokenizer": {
-                "name": "other",
-                "version": "1",
-                "vocabulary_revision": "other",
-                "accounting_method": "offline",
+                "name": "tiktoken",
+                "version": "0.9.0",
+                "vocabulary_revision": "cl100k_base",
+                "accounting_method": "tiktoken cl100k_base",
             },
         },
         "read_decision_audit": {"project": "demo", "decision_ids": ["read-only"]},
@@ -185,10 +185,10 @@ def test_task_context_and_audit_are_black_box_contract_boundaries(tmp_path, monk
             "repository_scopes": ["plugins/context-library"],
             "agent_token_budget": 1000,
             "tokenizer": {
-                "name": "other",
-                "version": "1",
-                "vocabulary_revision": "other",
-                "accounting_method": "offline",
+                "name": "tiktoken",
+                "version": "0.9.0",
+                "vocabulary_revision": "cl100k_base",
+                "accounting_method": "tiktoken cl100k_base",
             },
         }
     )
@@ -254,10 +254,10 @@ def test_generated_task_context_matches_core_renderer(tmp_path, monkeypatch):
         "repository_scopes": ["plugins/context-library"],
         "agent_token_budget": 1000,
         "tokenizer": {
-            "name": "other",
-            "version": "1",
-            "vocabulary_revision": "other",
-            "accounting_method": "offline",
+            "name": "tiktoken",
+            "version": "0.9.0",
+            "vocabulary_revision": "cl100k_base",
+            "accounting_method": "tiktoken cl100k_base",
         },
     }
     generated = server.resolve_task_context(payload, register, revision=revision, source_scope=source_scope)
@@ -271,6 +271,54 @@ def test_generated_task_context_matches_core_renderer(tmp_path, monkeypatch):
         source_scope=source_scope,
     ).model_dump(mode="json", by_alias=True)
     assert generated == core
+
+
+def test_mcp_task_context_rejects_unsupported_tokenizer(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    with pytest.raises(server.McpError, match="unsupported tokenizer identity"):
+        server.get_task_context(
+            {
+                "project": "demo",
+                "task_summary": "Update the Plugin boundary",
+                "operation": "modify source",
+                "repository_scopes": ["plugins/context-library"],
+                "agent_token_budget": 1000,
+                "tokenizer": {
+                    "name": "other",
+                    "version": "1",
+                    "vocabulary_revision": "other",
+                    "accounting_method": "offline",
+                },
+            }
+        )
+
+
+def test_mcp_task_context_rejects_unavailable_encoder(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    import tiktoken
+
+    monkeypatch.setattr(tiktoken, "get_encoding", lambda _name: (_ for _ in ()).throw(OSError("private cache path")))
+    with pytest.raises(server.McpError, match="tokenizer encoder is unavailable") as error:
+        server.get_task_context(
+            {
+                "project": "demo",
+                "task_summary": "Update the Plugin boundary",
+                "operation": "modify source",
+                "repository_scopes": ["plugins/context-library"],
+                "agent_token_budget": 1000,
+                "tokenizer": {
+                    "name": "tiktoken",
+                    "version": "0.9.0",
+                    "vocabulary_revision": "cl100k_base",
+                    "accounting_method": "offline",
+                },
+            }
+        )
+    assert "private cache path" not in str(error.value)
 
 
 def test_mcp_get_task_context_tokenizer_schema_contract(tmp_path, monkeypatch):
