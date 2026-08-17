@@ -5,6 +5,7 @@
 - Add an evidence-backed roadmap for multi-project management, shared-context
   inheritance, review-authorized publication, and production autonomy
   evidence.
+- Document the required post-install Plugin runtime configuration step.
 
 ## 0.4.1 - 2026-08-17
 

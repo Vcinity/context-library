@@ -50,10 +50,25 @@ runtime overrides. Read/search MCP calls still require an explicit project
 argument, and projection refuses activation roots that overlap the canonical
 checkout in either direction.
 
+If the marketplace was staged manually, run the required post-install
+configuration step before registering or reinstalling the Plugin:
+
+```bash
+python3 "$MARKETPLACE_ROOT/plugins/context-library/scripts/configure.py" \
+  --library-root "$CANONICAL_LIBRARY_ROOT" \
+  --output "$MARKETPLACE_ROOT/plugins/context-library/runtime-config.json"
+```
+
+This creates the runtime configuration consumed by the MCP server and
+projection hook. Without it, installation can fail with `context library root
+is not configured`. Reinstall the Plugin after configuring an existing
+installation, then start a new Codex thread.
+
 For a shared administrator-managed installation, users need read/search access
 to the published marketplace root and write access to their own Codex plugin
 cache. They should not run this staging command against a root-owned or
-administrator-owned destination. Instead, register the readable shared root:
+administrator-owned destination. The administrator must configure the shared
+Plugin first, then users can register the readable shared root:
 
 ```bash
 codex plugin marketplace add /srv/shared/context-library-plugin-v0.4.1

@@ -109,6 +109,22 @@ The destination must not already exist; use a release-specific destination so
 upgrades and rollbacks remain explicit. Omit `--marketplace-name` to retain the
 public `context-library` marketplace name.
 
+If the marketplace was staged manually, run the required post-install
+configuration step before registering or reinstalling the Plugin:
+
+```sh
+python3 "$MARKETPLACE_ROOT/plugins/context-library/scripts/configure.py" \
+  --library-root "$CANONICAL_LIBRARY_ROOT" \
+  --output "$MARKETPLACE_ROOT/plugins/context-library/runtime-config.json"
+test -r "$MARKETPLACE_ROOT/plugins/context-library/runtime-config.json"
+```
+
+This file configures `CONTEXT_LIBRARY_ROOT` for the bundled MCP server and
+projection hook. A marketplace install without this step can fail with
+`context library root is not configured`. After configuring an already
+installed Plugin, reinstall it from the marketplace and start a new Codex
+thread so the updated runtime configuration is loaded.
+
 From a full monorepo checkout, the equivalent Make target is:
 
 ```sh
@@ -171,7 +187,8 @@ error.
 
 The administrator should stage the release in a shared, read-only location,
 ensure its directories are searchable and its files are readable by consumers,
-and then register that existing root:
+run the post-install configuration step above, and then register that existing
+root:
 
 ```sh
 MARKETPLACE_ROOT=/srv/shared/context-library-plugin-v0.4.1
