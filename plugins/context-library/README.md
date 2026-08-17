@@ -36,7 +36,7 @@ compatible read-only deployment without changing the source checkout:
 
 ```bash
 python3 scripts/install_plugin.py \
-  --destination /opt/context-library-plugin-v0.3.4 \
+  --destination /opt/context-library-plugin-v0.4.0 \
   --library-root /absolute/path/to/canonical-library \
   --marketplace-name organization-marketplace
 ```

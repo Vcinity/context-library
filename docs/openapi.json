@@ -728,6 +728,41 @@
         "title": "Person",
         "type": "object"
       },
+      "ProjectLifecycleControl": {
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "lifecycle": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lifecycle",
+          "expected_version",
+          "reason",
+          "idempotency_key"
+        ],
+        "title": "ProjectLifecycleControl",
+        "type": "object"
+      },
       "ProposalDraft": {
         "additionalProperties": false,
         "properties": {
@@ -1328,7 +1363,7 @@
   },
   "info": {
     "title": "Context Library Manager Runtime",
-    "version": "0.3.4"
+    "version": "0.4.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1906,6 +1941,43 @@
           }
         },
         "summary": "Audit"
+      }
+    },
+    "/api/v1/projects/{project}/autonomy/evidence": {
+      "get": {
+        "operationId": "autonomy_evidence_api_v1_projects__project__autonomy_evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Autonomy Evidence"
       }
     },
     "/api/v1/projects/{project}/configuration": {
@@ -2743,6 +2815,88 @@
           }
         },
         "summary": "Library Search"
+      }
+    },
+    "/api/v1/projects/{project}/lifecycle": {
+      "get": {
+        "operationId": "project_lifecycle_api_v1_projects__project__lifecycle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Lifecycle"
+      },
+      "post": {
+        "operationId": "transition_project_lifecycle_api_v1_projects__project__lifecycle_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectLifecycleControl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transition Project Lifecycle"
       }
     },
     "/api/v1/projects/{project}/overview": {

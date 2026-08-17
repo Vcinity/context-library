@@ -55,9 +55,9 @@ def main() -> None:
         if completed.returncode:
             raise RuntimeError(f"installed clm failed with exit {completed.returncode}: {completed.stderr[-2000:]}")
         payload = json.loads(completed.stdout)
-        if payload["data"]["product_version"] != "0.3.4":
+        if payload["data"]["product_version"] != "0.4.0":
             raise RuntimeError(f"unexpected installed version: {payload}")
-        print(json.dumps({"wheel": wheels[0].name, "installed_version": "0.3.4"}, sort_keys=True))
+        print(json.dumps({"wheel": wheels[0].name, "installed_version": "0.4.0"}, sort_keys=True))
 
 
 if __name__ == "__main__":

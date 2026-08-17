@@ -1,6 +1,6 @@
 {
   "name": "context-library",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Shared project-intent library for decision registers, provenance, project packs, and reusable Codex guidance.",
   "author": {
     "name": "Kevin Barrett"

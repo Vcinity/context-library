@@ -32,7 +32,7 @@ release to values approved for the deployment:
 
 ```sh
 REPOSITORY_URL="<context-library-repository-url>"
-RELEASE=v0.3.4
+RELEASE=v0.4.0
 SOURCE_ROOT=/opt/context-library-plugin-source
 
 git clone \

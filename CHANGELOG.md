@@ -6,6 +6,10 @@
   inheritance, review-authorized publication, and production autonomy
   evidence.
 
+## 0.4.0 - 2026-08-17
+
+- Bump the integrated product release for redeployment.
+
 ## 0.3.4 - 2026-08-08
 
 - Add deployment-time Plugin runtime configuration shared by the MCP server
