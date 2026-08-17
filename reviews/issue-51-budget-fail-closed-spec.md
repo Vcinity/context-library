@@ -32,13 +32,30 @@ surfaces.
 
 ## Proposed contract and design
 
-Reject a request with a structured MCP error when the tokenizer is malformed,
-unpinned, unsupported, or unavailable. The only verified identity remains the
+Malformed and unpinned tokenizer shapes already fail closed at request
+validation. Extend that behavior so a valid but unsupported tokenizer identity
+and an unavailable encoder also fail closed. Reject a request with a
+structured MCP error for either case. The only verified identity remains the
 packaged `tiktoken` `0.9.0` / `cl100k_base` identity with the documented
 accounting method. A valid supported request computes the token count using
 the packaged encoder before applying the budget; if over budget, it returns a
 deterministic incomplete/truncated result with omitted IDs and a truthful
-`budget_status=verified`. No unverified result is returned.
+`budget_status=verified`. No unverified result is returned. Core raises a plain
+`ValueError` for this rejection, matching the existing malformed-request
+convention; the MCP boundary already converts `ValueError` to `McpError` and
+must not import Plugin code.
+
+Encoder resolution and encoding must sit behind one narrow, enumerated
+exception boundary in both the authoritative Core renderer and generated
+Plugin runtime. Any resolution failure, including dependency, cache, or OS
+failures, is classified as `unavailable` and converted to the controlled
+`ValueError`/`McpError` path. Raw exception details must not be returned to the
+MCP caller.
+
+Tokenizer-verification failure is a request-validation error, distinct from
+the Section 12.5 missing-context classification. It uses the structured
+request error and does not claim that project context is missing or fabricate
+a missing-context notice.
 
 Keep the response and generated contract fields explicit: `budget_status`
 must distinguish verified results, `token_count` must describe the returned
@@ -59,11 +76,17 @@ content or credentials.
   and packaged MCP subprocess tests: black-box supported/unsupported,
   malformed, unavailable, and over-budget cases.
 - Plugin skill/usage documentation and generated response schema as needed.
+- Replace `test_unknown_tokenizer_is_separate_from_exact_budget_claim` in
+  `tests/contracts/test_task_context.py`; it encodes the pre-fix successful
+  `budget_status="unverified"` contract and must instead assert controlled
+  rejection.
 
 ## Test strategy
 
-1. Add contract-level tests for supported accounting, malformed identity,
-   unsupported identity, unavailable encoder, and over-budget content.
+1. Preserve coverage for already-failing malformed and unpinned identities;
+   add contract-level tests for supported accounting, unsupported identity,
+   forced encoder lookup/encoding failure, and over-budget content. Replace
+   the existing unknown-tokenizer success assertion with a rejection assertion.
 2. Add Plugin MCP tests against the packaged/generated runtime and subprocess
    boundary, asserting structured errors and no false complete claim.
 3. Assert deterministic output across repeated supported over-budget requests,
@@ -88,14 +111,19 @@ git diff --check
 - Core and generated Plugin behavior can drift; regenerate artifacts and test
   both the source and packaged boundaries.
 - A missing tokenizer dependency must not be mistaken for an empty capsule;
-  isolate dependency availability in a deterministic validation path.
+  isolate dependency availability in a deterministic validation path. Both
+  Core and generated runtime currently differ here: `task_context.py:117`
+  does not catch encoder failures while `core_runtime.py:927-937` catches only
+  `(ImportError, ValueError)`. The implementation must make the two paths use
+  the same controlled failure classification without leaking raw exceptions.
 - The scope must not expand into new tokenizer support; reject and document
   unsupported identities instead.
 
 ## Unresolved questions
 
 - Whether the unavailable case should use a distinct machine-readable error
-  code or a stable message family already used by MCP errors.
+  code or a stable message family already used by MCP errors; either choice
+  must remain behind the existing Core `ValueError` and MCP `McpError` layers.
 - Whether response schema changes are required beyond documenting that
   `unverified` is no longer a successful response state.
 - Whether the existing generated runtime helper or Core renderer should own
