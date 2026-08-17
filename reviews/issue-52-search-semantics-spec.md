@@ -39,8 +39,11 @@ MCP search must both use that helper. Score each decision by: exact
 complete-substring match first; then number
 of distinct query terms present in the searchable decision fields; then stable
 decision-register order and `decision_id` as a final tie-break. Return the
-existing match fields plus machine-readable `match_mode`, `matched_terms`, and
-`diagnostic` values. A compound query with term matches but no exact substring
+existing match fields plus machine-readable `match_mode`, `matched_terms`,
+`diagnostic`, `superseded`, `superseded_by`, and an applicability state
+(`unconditional`, `satisfied`, `undetermined`, or `unsatisfied`) for every
+match. Return response-level `truncated` and `total_matches` fields so
+max-result omission is never silent. A compound query with term matches but no exact substring
 must say that term matching was used; a true no-match returns an empty list and
 `diagnostic=no-match`. Preserve all parsed records and make superseded/
 applicability state visible rather than silently claiming active authority.
@@ -71,7 +74,8 @@ fallback.
    partials, superseded records, inapplicable records, true no-match, stable
    ties, and max-result truncation.
 2. Assert response diagnostics distinguish exact, lexical fallback, and no
-   match and include concrete matched terms.
+   match, include concrete matched terms, expose supersession/applicability
+   state, and report truncation/total matches.
 3. Run repeated calls and packaged MCP subprocess calls to prove byte-stable
    ordering and read-only canonical preservation.
 
@@ -79,6 +83,8 @@ fallback.
 
 ```sh
 poetry run pytest tests/plugin/test_mcp_read_only.py
+make contracts
+make contracts-check
 make plugin-check
 make test
 git diff --check
@@ -89,7 +95,8 @@ git diff --check
 - Adding lexical fallback can change result ordering; document exact ordering
   and lock it with black-box tests.
 - Returning superseded/inapplicable matches could be misread as operative;
-  retain provenance/state fields or explicit diagnostic labels.
+  retain the concrete provenance, supersession, and applicability fields
+  required above; these are not optional diagnostics.
 - Query tokenization must remain local and deterministic; avoid external
   language services or fuzzy scoring.
 
