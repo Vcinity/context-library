@@ -29,6 +29,7 @@ def atomic_write(path: Path, content: str) -> None:
             temporary_name = stream.name
             stream.write(content)
         Path(temporary_name).replace(path)
+        os.chmod(path, 0o644)
     finally:
         if temporary_name is not None:
             Path(temporary_name).unlink(missing_ok=True)
@@ -99,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeConfigError as exc:
             parser.error(str(exc))
         Path(temporary_name).replace(output)
+        os.chmod(output, 0o644)
     finally:
         if temporary_name is not None:
             Path(temporary_name).unlink(missing_ok=True)

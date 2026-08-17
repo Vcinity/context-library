@@ -161,6 +161,30 @@ projection, while the skill and read-only MCP server remain available.
 The marketplace registration supplies code distribution only. It does not
 grant canonical write authority and does not replace the Manager review path.
 
+## Shared read-only marketplace
+
+When an administrator publishes one marketplace for several local Codex
+users, the marketplace root must be readable and searchable by every user who
+will install it. Codex reads `.agents/plugins/marketplace.json` before the
+Plugin can be installed; an unreadable manifest produces a permission-denied
+error.
+
+The administrator should stage the release in a shared, read-only location,
+ensure its directories are searchable and its files are readable by consumers,
+and then register that existing root:
+
+```sh
+MARKETPLACE_ROOT=/srv/shared/context-library-plugin-v0.4.0
+
+codex plugin marketplace add "$MARKETPLACE_ROOT"
+codex plugin add context-library@context-library
+```
+
+Consumers should not run the staging installer into a path they do not own.
+They need read access to the shared marketplace root and write access to their
+own Codex plugin cache. If staging used a custom marketplace name, replace
+the suffix in the `codex plugin add` command with that name.
+
 ## Verify the installation
 
 From a consumer workspace with the Plugin runtime configuration present (or

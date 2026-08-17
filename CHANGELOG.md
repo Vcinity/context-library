@@ -5,6 +5,7 @@
 - Add an evidence-backed roadmap for multi-project management, shared-context
   inheritance, review-authorized publication, and production autonomy
   evidence.
+- Make generated shared-marketplace files readable by consumer Codex users.
 
 ## 0.4.0 - 2026-08-17
 

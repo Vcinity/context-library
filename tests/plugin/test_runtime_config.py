@@ -105,6 +105,7 @@ def test_configure_script_creates_valid_deployment_local_config(tmp_path):
         "project": "demo",
         "context_requirement": "required",
     }
+    assert output.stat().st_mode & 0o777 == 0o644
 
 
 def test_configure_script_renames_deployment_marketplace(tmp_path):
@@ -152,6 +153,7 @@ def test_configure_script_renames_deployment_marketplace(tmp_path):
     assert payload["name"] == "team-context"
     assert payload["interface"] == {"displayName": "Context Library"}
     assert payload["plugins"][0]["source"] == {"source": "local", "path": "./plugins/context-library"}
+    assert marketplace.stat().st_mode & 0o777 == 0o644
 
 
 def test_configure_script_preserves_existing_config_when_new_values_are_invalid(tmp_path):

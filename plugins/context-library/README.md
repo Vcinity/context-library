@@ -50,6 +50,20 @@ runtime overrides. Read/search MCP calls still require an explicit project
 argument, and projection refuses activation roots that overlap the canonical
 checkout in either direction.
 
+For a shared administrator-managed installation, users need read/search access
+to the published marketplace root and write access to their own Codex plugin
+cache. They should not run this staging command against a root-owned or
+administrator-owned destination. Instead, register the readable shared root:
+
+```bash
+codex plugin marketplace add /srv/shared/context-library-plugin-v0.4.0
+codex plugin add context-library@context-library
+```
+
+The shared root must allow consumers to read
+`.agents/plugins/marketplace.json` and traverse its parent directories. If the
+administrator selected a custom marketplace name, use that name after `@`.
+
 Start a new Codex thread after install or reinstall so Codex reloads the
 updated skill set.
 
