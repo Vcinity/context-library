@@ -42,6 +42,16 @@ config path, expected environment override, remediation, and whether normal
 MCP use is allowed. Do not include raw config contents, credentials, or
 canonical file contents.
 
+The preflight condition enum is a runtime-config/root-layer classification
+evaluated before content resolution. It is distinct from the existing SPEC
+§12.5 content-resolution vocabulary (`available`, `missing`, `unreadable`,
+`invalid`, `ambiguous`, `stale-projection`). Session-start diagnostics must
+surface both layers without contradictory health claims: the runtime condition
+is the cause when preflight blocks content resolution, while the §12.5
+classification applies only after a readable runtime is available. The
+classification consumed by #48 must preserve this runtime condition rather
+than collapsing it into a generic `missing` state.
+
 Missing configuration remains distinguishable from an explicitly disabled
 context requirement. A valid configuration whose root is inaccessible is an
 installed-runtime failure and must produce a structured MCP error; #48 may
@@ -64,6 +74,9 @@ when no override is active.
   the status without canonical writes or private-content leakage.
 - `plugins/context-library/scripts/configure.py` and deployment/user docs:
   actionable remediation text.
+- `docs/PLUGIN_DEPLOYMENT.md`: keep the documented
+  `context library root is not configured` example and recovery guidance in
+  sync with the final condition/remediation contract.
 - `tests/plugin/test_runtime_config.py`, MCP subprocess tests, and staged
   packaging tests: fresh install, first call, remediation, restart, recovery.
 
@@ -79,6 +92,12 @@ when no override is active.
    successful recovery without mutating canonical fixtures.
 4. Add regression coverage distinguishing valid disabled/absent policy from
    installed-but-inaccessible runtime failure for #48 coordination.
+5. Replace the old exception-based assertion in
+   `tests/plugin/test_mcp_read_only.py::test_mcp_requires_explicit_root_and_project`
+   deliberately: decide whether `get_library_status` remains an exception
+   boundary while the new preflight returns status, or make the status object
+   the single public behavior and update the test accordingly. No hybrid
+   behavior is acceptable.
 
 ## Validation commands
 
@@ -101,6 +120,10 @@ git diff --check
   unreliable.
 - #48 may require an agent-facing stop disposition; keep this issue's contract
   machine-readable and let #48 own policy wording and turn termination.
+- No preserved `issue-48-*` specification artifact currently exists in
+  `reviews/`. The #50/#48 classification interface is provisional until #48
+  receives its own specification gate; if that gate changes the shared
+  condition contract, this checkpoint must be refreshed before implementation.
 
 ## Unresolved questions
 
