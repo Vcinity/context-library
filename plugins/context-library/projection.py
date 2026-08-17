@@ -30,6 +30,7 @@ from generated.core_runtime import (
 from generated.core_runtime import (
     discover_packs as core_discover_packs,
 )
+import runtime_config
 from runtime_config import RuntimeConfigError, Setting, setting
 
 CONFIG_PATH = Path(".context-library/config.json")
@@ -147,14 +148,34 @@ def activation_root(cwd: Path | None = None) -> Path:
     return (cwd or Path.cwd()).resolve()
 
 
+_CONDITION_SUMMARIES = {
+    runtime_config.CONDITION_MISSING_CONFIG: (
+        "Context Library source is unavailable: CONTEXT_LIBRARY_ROOT is not configured"
+    ),
+    runtime_config.CONDITION_MALFORMED_CONFIG: "Context Library runtime configuration is malformed",
+    runtime_config.CONDITION_UNREADABLE_CONFIG: "Context Library runtime configuration is unreadable",
+}
+
+
+def _raise_root_unavailable(status: "runtime_config.RuntimePreflight") -> None:
+    summary = _CONDITION_SUMMARIES.get(status.condition)
+    if summary is None:
+        if status.condition == runtime_config.CONDITION_MISSING_ROOT:
+            summary = f"Context Library source is unavailable: {status.library_root}"
+        else:
+            summary = f"Context Library source is unreadable: {status.library_root}"
+    message = f"{summary}. {status.remediation}" if status.remediation else summary
+    error = ProjectionError(message)
+    error.runtime_condition = status.condition  # type: ignore[attr-defined]
+    raise error
+
+
 def library_root() -> Path:
-    try:
-        configured = setting("library_root").value
-    except RuntimeConfigError as exc:
-        raise ProjectionError(str(exc)) from exc
-    if not configured:
-        raise ProjectionError("Context Library source is unavailable: CONTEXT_LIBRARY_ROOT is not configured")
-    return Path(configured).expanduser().resolve()
+    status = runtime_config.preflight()
+    if not status.allowed:
+        _raise_root_unavailable(status)
+    assert status.library_root is not None
+    return Path(status.library_root).expanduser().resolve()
 
 
 def parse_decisions(text: str) -> tuple[Decision, ...]:
@@ -191,7 +212,19 @@ def environment_context_requirement() -> str | None:
     return requirement
 
 
+_RUNTIME_CONDITION_TO_CLASSIFICATION = {
+    runtime_config.CONDITION_MISSING_CONFIG: "missing",
+    runtime_config.CONDITION_MISSING_ROOT: "missing",
+    runtime_config.CONDITION_MALFORMED_CONFIG: "invalid",
+    runtime_config.CONDITION_UNREADABLE_CONFIG: "unreadable",
+    runtime_config.CONDITION_UNREADABLE_ROOT: "unreadable",
+}
+
+
 def resolution_classification(error: BaseException) -> str:
+    runtime_condition = getattr(error, "runtime_condition", None)
+    if runtime_condition in _RUNTIME_CONDITION_TO_CLASSIFICATION:
+        return _RUNTIME_CONDITION_TO_CLASSIFICATION[runtime_condition]
     message = str(error).lower()
     if "ambiguous" in message or "undetermined" in message:
         return "ambiguous"
@@ -880,8 +913,6 @@ def prepare(root: Path, *, automatic: bool = False) -> Compilation:
     resolved_root = root.resolve()
     if resolved_root == source_root or source_root in resolved_root.parents or resolved_root in source_root.parents:
         raise ProjectionError("consumer activation root must be outside the canonical Context Library root")
-    if not source_root.is_dir():
-        raise ProjectionError(f"Context Library source is unavailable: {source_root}")
     packs = discover_packs(source_root)
     config = load_config(root, packs)
     selected = resolve_project_pack(packs, config.project)

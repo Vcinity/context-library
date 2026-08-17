@@ -125,6 +125,30 @@ projection hook. A marketplace install without this step can fail with
 installed Plugin, reinstall it from the marketplace and start a new Codex
 thread so the updated runtime configuration is loaded.
 
+### Runtime diagnostics
+
+Call the bundled `get_library_status` MCP tool first when diagnosing a fresh
+or newly staged install. It is a status boundary, not an exception boundary:
+it never raises, and instead reports a machine-readable `condition` with
+safe, actionable `remediation`. Every other MCP tool (`list_project_packs`,
+`read_project_artifact`, `search_decisions`, `get_task_context`,
+`read_decision_audit`) remains exception-based and fails closed with the
+same classification when the runtime is not usable.
+
+| `condition`          | Meaning                                                            | Remediation                                                        |
+| --------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `healthy`             | Configured root is resolvable, exists, and is readable.            | none                                                                  |
+| `missing_config`      | No `runtime-config.json` and no `CONTEXT_LIBRARY_ROOT` override.    | Run `scripts/configure.py --library-root <path>` or set the override. |
+| `malformed_config`    | `runtime-config.json` exists but fails schema validation.           | Regenerate it with `scripts/configure.py`.                            |
+| `unreadable_config`   | `runtime-config.json` exists but cannot be read (permissions).      | Fix file permissions or regenerate it.                                |
+| `missing_root`        | The configured library root path does not exist.                    | Verify the mount/path, then reconfigure if it moved.                  |
+| `unreadable_root`     | The configured library root exists but is not readable.              | Grant the Plugin process read/traverse access to the root.            |
+
+`CONTEXT_LIBRARY_ROOT` always takes precedence over the bundled
+`runtime-config.json`, including when the bundled file is malformed: an
+active environment override is classified on its own, never blocked by a
+broken bundled file it does not need.
+
 From a full monorepo checkout, the equivalent Make target is:
 
 ```sh
@@ -223,9 +247,11 @@ python3 "$MARKETPLACE_ROOT/plugins/context-library/projection.py" check \
 ```
 
 Also verify that the MCP process can read the configured root using the
-Plugin's read-only smoke test when the full monorepo is available. A deployed
-Plugin must never be used to create, repair, migrate, or publish canonical
-files.
+Plugin's read-only smoke test when the full monorepo is available, or call
+the bundled `get_library_status` MCP tool directly and confirm its
+`condition` is `healthy`. See "Runtime diagnostics" above for the full
+condition and remediation contract. A deployed Plugin must never be used to
+create, repair, migrate, or publish canonical files.
 
 ## Upgrade and rollback
 
