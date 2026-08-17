@@ -32,8 +32,11 @@ matches.
 
 ## Proposed contract and design
 
-Normalize query terms with the existing deterministic lowercase lexical token
-rule. Score each decision by: exact complete-substring match first; then number
+Normalize query terms with one shared deterministic lowercase lexical token
+helper extracted into `src/context_library_core/canonical.py`, which is already
+part of the generated Plugin source digest; the retrieval baseline and Plugin
+MCP search must both use that helper. Score each decision by: exact
+complete-substring match first; then number
 of distinct query terms present in the searchable decision fields; then stable
 decision-register order and `decision_id` as a final tie-break. Return the
 existing match fields plus machine-readable `match_mode`, `matched_terms`, and
@@ -49,6 +52,9 @@ fallback.
 
 ## Affected files and components
 
+- `src/context_library_core/canonical.py` and
+  `scripts/generate_plugin_runtime.py`: shared lexical token helper and
+  deterministic generated-runtime inclusion.
 - `plugins/context-library/mcp/context_library_server.py`: search algorithm and
   response contract/schema.
 - `plugins/context-library/skills/context-library/references/usage.md`,
@@ -89,8 +95,11 @@ git diff --check
 
 ## Unresolved questions
 
-- Whether to preserve the existing response shape exactly and encode
-  diagnostics in new optional fields, or version the response contract.
+- The response MUST carry a named `schema` and `schema_version` under SPEC
+  §7.3 and §8.1 (for example, `context-library/search-decisions-response`,
+  version 1), additive to the existing `matches` field. The implementation
+  must decide only the exact field names and envelope placement; it cannot
+  ship an unversioned diagnostic payload.
 - Whether all query terms must match for lexical fallback or partial coverage
   should be returned with a coverage score; the implementation must choose one
   and document it before code changes.
