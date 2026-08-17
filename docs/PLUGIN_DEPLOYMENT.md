@@ -32,7 +32,7 @@ release to values approved for the deployment:
 
 ```sh
 REPOSITORY_URL="<context-library-repository-url>"
-RELEASE=v0.4.0
+RELEASE=v0.4.1
 SOURCE_ROOT=/opt/context-library-plugin-source
 
 git clone \
@@ -174,7 +174,7 @@ ensure its directories are searchable and its files are readable by consumers,
 and then register that existing root:
 
 ```sh
-MARKETPLACE_ROOT=/srv/shared/context-library-plugin-v0.4.0
+MARKETPLACE_ROOT=/srv/shared/context-library-plugin-v0.4.1
 
 codex plugin marketplace add "$MARKETPLACE_ROOT"
 codex plugin add context-library@context-library

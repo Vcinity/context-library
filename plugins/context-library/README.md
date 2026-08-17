@@ -36,7 +36,7 @@ compatible read-only deployment without changing the source checkout:
 
 ```bash
 python3 scripts/install_plugin.py \
-  --destination /opt/context-library-plugin-v0.4.0 \
+  --destination /opt/context-library-plugin-v0.4.1 \
   --library-root /absolute/path/to/canonical-library \
   --marketplace-name organization-marketplace
 ```
@@ -56,7 +56,7 @@ cache. They should not run this staging command against a root-owned or
 administrator-owned destination. Instead, register the readable shared root:
 
 ```bash
-codex plugin marketplace add /srv/shared/context-library-plugin-v0.4.0
+codex plugin marketplace add /srv/shared/context-library-plugin-v0.4.1
 codex plugin add context-library@context-library
 ```
 
