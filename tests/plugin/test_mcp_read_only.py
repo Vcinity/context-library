@@ -271,3 +271,73 @@ def test_generated_task_context_matches_core_renderer(tmp_path, monkeypatch):
         source_scope=source_scope,
     ).model_dump(mode="json", by_alias=True)
     assert generated == core
+
+
+def test_mcp_get_task_context_tokenizer_schema_contract(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    from generated.core_runtime import TASK_CONTEXT_REQUEST_JSON_SCHEMA
+
+    schema = server.TOOLS["get_task_context"]["inputSchema"]
+    tokenizer_schema = schema["properties"]["tokenizer"]
+    authoritative = TASK_CONTEXT_REQUEST_JSON_SCHEMA["$defs"]["TokenizerIdentity"]
+
+    assert "name" in tokenizer_schema["properties"]
+    assert "version" in tokenizer_schema["properties"]
+    assert "vocabulary_revision" in tokenizer_schema["properties"]
+    assert "accounting_method" in tokenizer_schema["properties"]
+    assert "pinned" in tokenizer_schema["properties"]
+
+    assert tokenizer_schema["required"] == ["name", "version", "vocabulary_revision", "accounting_method"]
+    assert tokenizer_schema["additionalProperties"] is False
+    assert tokenizer_schema["properties"]["pinned"]["const"] is True
+    assert tokenizer_schema["required"] == authoritative["required"]
+    assert tokenizer_schema["additionalProperties"] == authoritative["additionalProperties"]
+    for field in tokenizer_schema["properties"]:
+        for constraint in ("type", "const", "default"):
+            if constraint in authoritative["properties"][field]:
+                assert (
+                    tokenizer_schema["properties"][field][constraint]
+                    == authoritative["properties"][field][constraint]
+                )
+
+    base_request = {
+        "project": "demo",
+        "task_summary": "Update the Plugin boundary",
+        "operation": "modify source",
+        "repository_scopes": ["plugins/context-library"],
+        "agent_token_budget": 1000,
+    }
+
+    valid_tokenizer = {
+        "name": "tiktoken",
+        "version": "0.9.0",
+        "vocabulary_revision": "cl100k_base",
+        "accounting_method": "offline",
+    }
+
+    result = server.get_task_context({**base_request, "tokenizer": valid_tokenizer})
+    assert result["schema"] == "context-library/task-context-response"
+
+    result = server.get_task_context({**base_request, "tokenizer": {**valid_tokenizer, "pinned": True}})
+    assert result["schema"] == "context-library/task-context-response"
+
+    with pytest.raises(server.McpError, match="tokenizer identity fields must be non-empty strings"):
+        server.get_task_context({**base_request, "tokenizer": {
+            "name": "tiktoken",
+            "version": "0.9.0",
+            "vocabulary_revision": "cl100k_base",
+        }})
+
+    with pytest.raises(server.McpError, match="unknown tokenizer field"):
+        server.get_task_context({**base_request, "tokenizer": {
+            **valid_tokenizer,
+            "truncation_mode": "none",
+        }})
+
+    with pytest.raises(server.McpError, match="tokenizer must be pinned"):
+        server.get_task_context({**base_request, "tokenizer": {
+            **valid_tokenizer,
+            "pinned": False,
+        }})

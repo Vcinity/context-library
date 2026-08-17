@@ -32,6 +32,104 @@ Use the context library as a shared map from project intent to implementation ch
 - Cite the register instead of reconstructing the discussion.
 - Keep the artifact append-only.
 
+## `get_task_context` MCP Tool
+
+Retrieve task-specific context from a project's decision register. The tokenizer field identifies the model whose token budget applies to the returned context.
+
+### Valid request
+
+```json
+{
+  "project": "example-project",
+  "task_summary": "Add end-to-end API tests",
+  "operation": "modify source",
+  "repository_scopes": ["tests/e2e"],
+  "agent_token_budget": 8000,
+  "tokenizer": {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+    "accounting_method": "offline"
+  }
+}
+```
+
+The tokenizer's `pinned` field defaults to `true` and enforces deterministic token counting:
+
+```json
+{
+  "project": "example-project",
+  "task_summary": "Add end-to-end API tests",
+  "operation": "modify source",
+  "repository_scopes": ["tests/e2e"],
+  "agent_token_budget": 8000,
+  "tokenizer": {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+    "accounting_method": "offline",
+    "pinned": true
+  }
+}
+```
+
+### Invalid requests
+
+Missing required tokenizer field:
+
+```json
+{
+  "project": "example-project",
+  "task_summary": "Add end-to-end API tests",
+  "operation": "modify source",
+  "repository_scopes": ["tests/e2e"],
+  "agent_token_budget": 8000,
+  "tokenizer": {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base"
+  }
+}
+```
+
+Unknown tokenizer field:
+
+```json
+{
+  "project": "example-project",
+  "task_summary": "Add end-to-end API tests",
+  "operation": "modify source",
+  "repository_scopes": ["tests/e2e"],
+  "agent_token_budget": 8000,
+  "tokenizer": {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+    "accounting_method": "offline",
+    "truncation_mode": "none"
+  }
+}
+```
+
+Invalid `pinned` value (must be `true`):
+
+```json
+{
+  "project": "example-project",
+  "task_summary": "Add end-to-end API tests",
+  "operation": "modify source",
+  "repository_scopes": ["tests/e2e"],
+  "agent_token_budget": 8000,
+  "tokenizer": {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+    "accounting_method": "offline",
+    "pinned": false
+  }
+}
+```
+
 ## Repository Projection
 
 - Configure explicit `project` and `context_requirement` values in
