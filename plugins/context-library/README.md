@@ -24,10 +24,14 @@ documented in [../../docs/PLUGIN_DEPLOYMENT.md](../../docs/PLUGIN_DEPLOYMENT.md)
 
 The bundled `context_library` MCP server exposes read-only tools:
 
-- `get_library_status`
-- `list_project_packs`
-- `read_project_artifact`
-- `search_decisions`
+<!-- CONTEXT_LIBRARY_TOOLS_INVENTORY -->
+- `get_library_status`: runtime configuration status
+- `list_project_packs`: list available project packs
+- `read_project_artifact`: read artifact from a project
+- `search_decisions`: search decision register
+- `get_task_context`: resolve task-specific context
+- `read_decision_audit`: read full decision records
+<!-- /CONTEXT_LIBRARY_TOOLS_INVENTORY -->
 
 Codex exposes these as `mcp__context_library__*` tools.
 

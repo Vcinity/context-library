@@ -130,6 +130,41 @@ Invalid `pinned` value (must be `true`):
 }
 ```
 
+## `read_decision_audit` MCP Tool
+
+Read full canonical records for explicitly selected decision IDs. This tool supports on-demand access to complete decision details without needing a task signal.
+
+### Valid request
+
+```json
+{
+  "project": "example-project",
+  "decision_ids": ["2025-03-api-versioning", "2025-02-database-choice"]
+}
+```
+
+Include related decisions (supersedes, superseded_by) with `include_related`:
+
+```json
+{
+  "project": "example-project",
+  "decision_ids": ["2025-03-api-versioning"],
+  "include_related": true
+}
+```
+
+Full request with explicit schema:
+
+```json
+{
+  "schema": "context-library/decision-audit-response",
+  "schema_version": 1,
+  "project": "example-project",
+  "decision_ids": ["2025-03-api-versioning", "2025-02-database-choice"],
+  "include_related": false
+}
+```
+
 ## Repository Projection
 
 - Configure explicit `project` and `context_requirement` values in
