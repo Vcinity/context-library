@@ -127,19 +127,135 @@ def test_mcp_distribution_ast_contains_no_mutating_file_operation():
     assert ".splitlines()" not in ast.unparse(tree)
 
 
-def test_mcp_search_uses_authoritative_decision_read_model(tmp_path, monkeypatch):
+def test_mcp_search_exact_match_and_response_structure(tmp_path, monkeypatch):
     server = load_server()
     root = library_fixture(tmp_path)
     monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
     result = server.search_decisions({"project": "demo", "query": "read-only"})
-    assert result["matches"] == [
-        {
-            "decision_id": "read-only",
-            "subject": "Read-only Plugin",
-            "excerpt": "Keep Plugin access read-only.",
-            "provenance": "explicit",
-        }
-    ]
+
+    assert result["schema"] == "context-library/search-decisions-response"
+    assert result["schema_version"] == 1
+    assert result["project"] == "demo"
+    assert result["query"] == "read-only"
+    assert result["path"].endswith("projects/demo/decision-register.md")
+    assert result["diagnostic"] == "exact"
+    assert result["truncated"] is False
+    assert result["total_matches"] == 1
+
+    assert len(result["matches"]) == 1
+    match = result["matches"][0]
+    assert match["decision_id"] == "read-only"
+    assert match["subject"] == "Read-only Plugin"
+    assert match["excerpt"] == "Keep Plugin access read-only."
+    assert match["provenance"] == "explicit"
+    assert match["match_mode"] == "exact"
+    assert set(match["matched_terms"]) == {"read", "only"}
+    assert match["superseded"] == []
+    assert match["superseded_by"] == []
+    assert match["applicability"] == "unconditional"
+
+
+def test_mcp_search_lexical_fallback_with_matched_terms(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    result = server.search_decisions({"project": "demo", "query": "plugin boundary"})
+
+    assert result["diagnostic"] == "lexical"
+    assert result["truncated"] is False
+    assert result["total_matches"] >= 1
+
+    for match in result["matches"]:
+        assert match["match_mode"] == "lexical"
+        assert len(match["matched_terms"]) > 0
+
+
+def test_mcp_search_no_match_returns_empty_with_diagnostic(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    result = server.search_decisions({"project": "demo", "query": "xyzabc123notfound"})
+
+    assert result["diagnostic"] == "no-match"
+    assert result["matches"] == []
+    assert result["truncated"] is False
+    assert result["total_matches"] == 0
+
+
+def test_mcp_search_respects_max_results_with_truncation(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+
+    register_text = (
+        "# Decision Register\n\n"
+        '<a id="first"></a>\n'
+        "### First decision\n\n"
+        "- Decision: Keep Plugin access read-only.\n"
+        "- Provenance: explicit\n"
+        '\n<a id="second"></a>\n'
+        "### Second decision\n\n"
+        "- Decision: Keep all services read-only.\n"
+        "- Provenance: explicit\n"
+        '\n<a id="third"></a>\n'
+        "### Third decision\n\n"
+        "- Decision: Keep data read-only.\n"
+        "- Provenance: explicit\n"
+    )
+    pack = root / "projects/demo"
+    (pack / "decision-register.md").write_text(register_text)
+
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    result = server.search_decisions({"project": "demo", "query": "read-only", "max_results": 2})
+
+    assert len(result["matches"]) == 2
+    assert result["truncated"] is True
+    assert result["total_matches"] == 3
+
+
+def test_mcp_search_reveals_supersession_and_applicability(tmp_path, monkeypatch):
+    server = load_server()
+    root = library_fixture(tmp_path)
+
+    register_text = (
+        "# Decision Register\n\n"
+        '<a id="old"></a>\n'
+        "### Old decision\n\n"
+        "- Decision: Keep Plugin access read-only.\n"
+        "- Provenance: explicit\n"
+        '\n<a id="new"></a>\n'
+        "### New decision\n\n"
+        "- Decision: Plugin read-only with stricter enforcement.\n"
+        "- Provenance: explicit\n"
+        "- Supersedes: old\n"
+        '\n<a id="conditional"></a>\n'
+        "### Conditional decision\n\n"
+        "- Decision: Plugin read-only when enforcing.\n"
+        "- Provenance: explicit\n"
+        "- Applies-When: enforcement mode is active\n"
+    )
+    pack = root / "projects/demo"
+    (pack / "decision-register.md").write_text(register_text)
+
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    result = server.search_decisions({"project": "demo", "query": "read-only"})
+
+    assert result["diagnostic"] == "exact"
+    assert result["total_matches"] >= 2
+
+    # Find the old decision match
+    old_match = next((m for m in result["matches"] if m["decision_id"] == "old"), None)
+    assert old_match is not None
+    assert "new" in old_match["superseded_by"]
+
+    # Find the new decision match
+    new_match = next((m for m in result["matches"] if m["decision_id"] == "new"), None)
+    assert new_match is not None
+    assert "old" in new_match["superseded"]
+
+    # Find the conditional match
+    cond_match = next((m for m in result["matches"] if m["decision_id"] == "conditional"), None)
+    assert cond_match is not None
+    assert cond_match["applicability"] == "undetermined"
 
 
 def test_mcp_requires_explicit_root_and_project(tmp_path, monkeypatch):

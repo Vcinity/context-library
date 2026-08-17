@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import time
 from dataclasses import dataclass
 from typing import Callable
 
 import tiktoken
 
-from .canonical import Decision, parse_register
+from .canonical import Decision, lexical_tokens, parse_register
 from .retrieval_contracts import (
     AgentVisibleResponse,
     CoverageReport,
@@ -103,12 +102,12 @@ def _plugin_selection(decisions: tuple[Decision, ...], query: str, limit: int) -
 
 
 def _lexical_selection(decisions: tuple[Decision, ...], query: str, limit: int) -> tuple[Decision, ...]:
-    terms = tuple(sorted(set(re.findall(r"[a-z0-9][a-z0-9_-]*", query.lower()))))
+    terms = tuple(sorted(set(lexical_tokens(query))))
     if not terms:
         raise RetrievalBaselineError("lexical query must contain a term")
     ranked = sorted(
         (
-            (sum(term in _searchable(decision) for term in terms), decision.decision_id, decision)
+            (sum(term in lexical_tokens(_searchable(decision)) for term in terms), decision.decision_id, decision)
             for decision in decisions
         ),
         key=lambda item: (-item[0], item[1]),

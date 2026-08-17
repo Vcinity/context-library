@@ -29,6 +29,7 @@ SCHEMA_FAMILIES: dict[str, list[int]] = {
     "context-library/retrieval-benchmark-gold": [1],
     "context-library/retrieval-benchmark-report": [1],
     "context-library/retrieval-benchmark-task": [1],
+    "context-library/search-decisions-response": [1],
     "context-library/source-envelope": [1],
     "context-library/version": [1],
 }
@@ -287,3 +288,29 @@ class AgentProviderResponse(Contract):
     usage: AgentUsage
     confidence: float = Field(ge=0, le=1)
     warnings: list[str] = Field(default_factory=list)
+
+
+class SearchDecisionMatch(Contract):
+    decision_id: str = Field(min_length=1, max_length=256)
+    subject: str = Field(min_length=1, max_length=4000)
+    excerpt: str = Field(min_length=1, max_length=4000)
+    provenance: Literal["explicit", "inferred", "assumed"]
+    match_mode: Literal["exact", "lexical"]
+    matched_terms: list[str] = Field(max_length=1000)
+    superseded: list[str] = Field(default_factory=list, max_length=1000)
+    superseded_by: list[str] = Field(default_factory=list, max_length=1000)
+    applicability: Literal["unconditional", "satisfied", "unsatisfied", "undetermined"]
+
+
+class SearchDecisionsResponse(Contract):
+    schema_id: Literal["context-library/search-decisions-response"] = Field(
+        default="context-library/search-decisions-response", alias="schema"
+    )
+    schema_version: Literal[1] = 1
+    project: str
+    query: str
+    path: str
+    matches: list[SearchDecisionMatch] = Field(default_factory=list)
+    diagnostic: Literal["exact", "lexical", "no-match"]
+    truncated: bool
+    total_matches: int = Field(ge=0)

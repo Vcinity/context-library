@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "SearchDecisionMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "unconditional",
+            "satisfied",
+            "unsatisfied",
+            "undetermined"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "decision_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "excerpt": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "match_mode": {
+          "enum": [
+            "exact",
+            "lexical"
+          ],
+          "title": "Match Mode",
+          "type": "string"
+        },
+        "matched_terms": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Matched Terms",
+          "type": "array"
+        },
+        "provenance": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "assumed"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "subject": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Subject",
+          "type": "string"
+        },
+        "superseded": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Superseded",
+          "type": "array"
+        },
+        "superseded_by": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Superseded By",
+          "type": "array"
+        }
+      },
+      "required": [
+        "decision_id",
+        "subject",
+        "excerpt",
+        "provenance",
+        "match_mode",
+        "matched_terms",
+        "applicability"
+      ],
+      "title": "SearchDecisionMatch",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "diagnostic": {
+      "enum": [
+        "exact",
+        "lexical",
+        "no-match"
+      ],
+      "title": "Diagnostic",
+      "type": "string"
+    },
+    "matches": {
+      "items": {
+        "$ref": "#/$defs/SearchDecisionMatch"
+      },
+      "title": "Matches",
+      "type": "array"
+    },
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "query": {
+      "title": "Query",
+      "type": "string"
+    },
+    "schema": {
+      "const": "context-library/search-decisions-response",
+      "default": "context-library/search-decisions-response",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "total_matches": {
+      "minimum": 0,
+      "title": "Total Matches",
+      "type": "integer"
+    },
+    "truncated": {
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "project",
+    "query",
+    "path",
+    "diagnostic",
+    "truncated",
+    "total_matches"
+  ],
+  "title": "SearchDecisionsResponse",
+  "type": "object"
+}
