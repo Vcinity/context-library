@@ -145,10 +145,23 @@ def test_mcp_search_uses_authoritative_decision_read_model(tmp_path, monkeypatch
 def test_mcp_requires_explicit_root_and_project(tmp_path, monkeypatch):
     server = load_server()
     monkeypatch.delenv("CONTEXT_LIBRARY_ROOT", raising=False)
+    # get_library_status is a status boundary, not an exception boundary: a
+    # missing/malformed/unreadable runtime is reported as structured,
+    # redacted, actionable diagnostics rather than raised.
+    status = server.get_library_status({})
+    assert status["condition"] == "missing_config"
+    assert status["allowed"] is False
+    assert "remediation" in status
+    assert "root" not in status
     with pytest.raises(server.McpError, match="not configured"):
-        server.get_library_status({})
+        server.list_project_packs({})
     root = library_fixture(tmp_path)
     monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(root))
+    healthy_status = server.get_library_status({})
+    assert healthy_status["condition"] == "healthy"
+    assert healthy_status["allowed"] is True
+    assert healthy_status["exists"] is True
+    assert healthy_status["readable"] is True
     with pytest.raises(server.McpError, match="explicitly selected"):
         server.read_project_artifact({"artifact": "decision-register"})
     with pytest.raises(server.McpError, match="explicitly selected"):

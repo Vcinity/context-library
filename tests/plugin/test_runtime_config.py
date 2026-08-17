@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -76,6 +77,101 @@ def test_runtime_config_rejects_invalid_values(tmp_path, overrides, match):
     path.write_text(json.dumps(config_payload(**overrides)), encoding="utf-8")
     with pytest.raises(runtime_config.RuntimeConfigError, match=match):
         runtime_config.load_runtime_config(path)
+
+
+def _clear_runtime_env(monkeypatch):
+    for name in runtime_config.FIELDS.values():
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_preflight_reports_missing_config_when_no_file_or_override(tmp_path, monkeypatch):
+    _clear_runtime_env(monkeypatch)
+    status = runtime_config.preflight(tmp_path / "runtime-config.json")
+    assert status.condition == runtime_config.CONDITION_MISSING_CONFIG
+    assert status.allowed is False
+    assert status.library_root is None
+    assert status.remediation is not None
+    assert "scripts/configure.py" in status.remediation
+
+
+def test_preflight_reports_malformed_config(tmp_path, monkeypatch):
+    _clear_runtime_env(monkeypatch)
+    path = tmp_path / "runtime-config.json"
+    path.write_text(json.dumps(config_payload(project="Not Stable")), encoding="utf-8")
+    status = runtime_config.preflight(path)
+    assert status.condition == runtime_config.CONDITION_MALFORMED_CONFIG
+    assert status.allowed is False
+    assert status.library_root is None
+
+
+def test_preflight_reports_unreadable_config(tmp_path, monkeypatch):
+    if os.geteuid() == 0:
+        pytest.skip("cannot exercise unreadable files while running as root")
+    _clear_runtime_env(monkeypatch)
+    path = tmp_path / "runtime-config.json"
+    path.write_text(json.dumps(config_payload()), encoding="utf-8")
+    path.chmod(0o000)
+    try:
+        status = runtime_config.preflight(path)
+    finally:
+        path.chmod(0o644)
+    assert status.condition == runtime_config.CONDITION_UNREADABLE_CONFIG
+    assert status.allowed is False
+    assert status.library_root is None
+
+
+def test_preflight_reports_missing_root(tmp_path, monkeypatch):
+    _clear_runtime_env(monkeypatch)
+    path = tmp_path / "runtime-config.json"
+    missing_root = tmp_path / "does-not-exist"
+    path.write_text(json.dumps(config_payload(library_root=str(missing_root))), encoding="utf-8")
+    status = runtime_config.preflight(path)
+    assert status.condition == runtime_config.CONDITION_MISSING_ROOT
+    assert status.allowed is False
+    assert status.library_root == str(missing_root)
+
+
+def test_preflight_reports_unreadable_root(tmp_path, monkeypatch):
+    if os.geteuid() == 0:
+        pytest.skip("cannot exercise unreadable directories while running as root")
+    _clear_runtime_env(monkeypatch)
+    library = tmp_path / "library"
+    library.mkdir()
+    path = tmp_path / "runtime-config.json"
+    path.write_text(json.dumps(config_payload(library_root=str(library))), encoding="utf-8")
+    library.chmod(0o000)
+    try:
+        status = runtime_config.preflight(path)
+    finally:
+        library.chmod(0o755)
+    assert status.condition == runtime_config.CONDITION_UNREADABLE_ROOT
+    assert status.allowed is False
+
+
+def test_preflight_reports_healthy_configuration(tmp_path, monkeypatch):
+    _clear_runtime_env(monkeypatch)
+    library = tmp_path / "library"
+    library.mkdir()
+    path = tmp_path / "runtime-config.json"
+    path.write_text(json.dumps(config_payload(library_root=str(library))), encoding="utf-8")
+    status = runtime_config.preflight(path)
+    assert status.condition == runtime_config.CONDITION_HEALTHY
+    assert status.allowed is True
+    assert status.library_root == str(library.resolve())
+    assert status.remediation is None
+
+
+def test_preflight_environment_override_takes_precedence_over_malformed_bundled_config(tmp_path, monkeypatch):
+    library = tmp_path / "library"
+    library.mkdir()
+    path = tmp_path / "runtime-config.json"
+    path.write_text(json.dumps(config_payload(project="Not Stable")), encoding="utf-8")
+    monkeypatch.setenv("CONTEXT_LIBRARY_ROOT", str(library))
+    monkeypatch.delenv("CONTEXT_LIBRARY_PROJECT", raising=False)
+    monkeypatch.delenv("CONTEXT_LIBRARY_CONTEXT_REQUIREMENT", raising=False)
+    status = runtime_config.preflight(path)
+    assert status.condition == runtime_config.CONDITION_HEALTHY
+    assert status.config_source == "environment"
 
 
 def test_configure_script_creates_valid_deployment_local_config(tmp_path):

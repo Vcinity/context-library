@@ -31,6 +31,16 @@ The bundled `context_library` MCP server exposes read-only tools:
 
 Codex exposes these as `mcp__context_library__*` tools.
 
+`get_library_status` is a status boundary, not an exception boundary: call it
+first to diagnose a fresh or newly staged install. It never raises and
+instead reports a machine-readable `condition` (`healthy`, `missing_config`,
+`malformed_config`, `unreadable_config`, `missing_root`, or
+`unreadable_root`) with safe, actionable `remediation`. Every other tool
+remains exception-based and fails closed with the same classification when
+the runtime is not usable. See
+[../../docs/PLUGIN_DEPLOYMENT.md](../../docs/PLUGIN_DEPLOYMENT.md) for the
+full condition and remediation contract.
+
 From the monorepo or a documented sparse source checkout, stage and install a
 compatible read-only deployment without changing the source checkout:
 

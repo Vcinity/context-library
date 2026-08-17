@@ -100,6 +100,7 @@ def diagnostics() -> dict[str, object]:
         "project": policy.project,
         "requirement_source": policy.source,
         "availability": None,
+        "runtime_condition": None,
         "source_digest": None,
         "projection_fresh": None,
     }
@@ -120,6 +121,7 @@ def diagnostics() -> dict[str, object]:
             result["projection_fresh"] = False
     except (OSError, projection.ProjectionError) as exc:
         result["availability"] = projection.resolution_classification(exc)
+        result["runtime_condition"] = getattr(exc, "runtime_condition", None)
         result["projection_fresh"] = False
     return result
 

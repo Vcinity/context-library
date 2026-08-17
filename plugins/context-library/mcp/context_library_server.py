@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,7 +19,7 @@ from generated.core_runtime import (  # noqa: E402
     resolve_pack,
     resolve_task_context,
 )
-from runtime_config import RuntimeConfigError, setting  # noqa: E402
+import runtime_config  # noqa: E402
 
 PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_PROTOCOL_VERSIONS = {
@@ -46,14 +45,31 @@ class McpError(Exception):
         self.code = code
 
 
+_CONDITION_SUMMARIES = {
+    runtime_config.CONDITION_MISSING_CONFIG: "context library root is not configured",
+    runtime_config.CONDITION_MALFORMED_CONFIG: "context library runtime configuration is malformed",
+    runtime_config.CONDITION_UNREADABLE_CONFIG: "context library runtime configuration is unreadable",
+}
+
+
+def _root_unavailable_message(status: runtime_config.RuntimePreflight) -> str:
+    summary = _CONDITION_SUMMARIES.get(status.condition)
+    if summary is None:
+        if status.condition == runtime_config.CONDITION_MISSING_ROOT:
+            summary = f"context library root does not exist: {status.library_root}"
+        else:
+            summary = f"context library root is not readable: {status.library_root}"
+    if status.remediation:
+        return f"{summary}. {status.remediation}"
+    return summary
+
+
 def library_root() -> Path:
-    try:
-        configured = setting("library_root").value
-    except RuntimeConfigError as exc:
-        raise McpError(str(exc)) from exc
-    if not configured:
-        raise McpError("context library root is not configured")
-    return Path(configured).expanduser().resolve()
+    status = runtime_config.preflight()
+    if not status.allowed:
+        raise McpError(_root_unavailable_message(status))
+    assert status.library_root is not None
+    return Path(status.library_root).expanduser().resolve()
 
 
 def read_text(path: Path) -> str:
@@ -108,22 +124,41 @@ def pack_has_decision_artifacts(path: Path) -> bool:
 
 
 def get_library_status(_args: dict[str, Any] | None = None) -> dict[str, Any]:
-    root = library_root()
-    exists = root.exists()
-    return {
-        "root": str(root),
-        "exists": exists,
-        "readable": os.access(root, os.R_OK) if exists else False,
-        "active_pack": "legacy" if (root / "decision-artifacts").exists() else None,
+    """Report the runtime preflight condition without raising.
+
+    This tool is a status boundary, not an exception boundary: it is meant to
+    be safe to call first, before normal library-dependent tools, so an agent
+    can diagnose a missing, malformed, unreadable, missing-root, or
+    unreadable-root deployment and receive redacted, actionable remediation.
+    Every other MCP tool remains exception-based (McpError) because it needs
+    the root to actually perform a read.
+    """
+    status = runtime_config.preflight()
+    result: dict[str, Any] = {
+        "schema": "context-library/plugin-runtime-status",
+        "schema_version": 1,
+        "condition": status.condition,
+        "allowed": status.allowed,
+        "config_path": status.config_path,
     }
+    if status.config_source is not None:
+        result["config_source"] = status.config_source
+    if status.remediation is not None:
+        result["remediation"] = status.remediation
+    if status.library_root is not None:
+        root = Path(status.library_root)
+        readable = status.condition == runtime_config.CONDITION_HEALTHY
+        result["root"] = str(root)
+        result["exists"] = status.condition != runtime_config.CONDITION_MISSING_ROOT
+        result["readable"] = readable
+        result["active_pack"] = "legacy" if readable and (root / "decision-artifacts").exists() else None
+    return result
 
 
 def list_project_packs(args: dict[str, Any] | None = None) -> dict[str, Any]:
     args = args or {}
     include_incomplete = bool(args.get("include_incomplete", False))
     root = library_root()
-    if not root.exists():
-        raise McpError(f"context library root does not exist: {root}")
 
     packs: list[dict[str, Any]] = [
         {
@@ -251,7 +286,11 @@ def read_decision_audit(args: dict[str, Any] | None = None) -> dict[str, Any]:
 
 TOOLS: dict[str, dict[str, Any]] = {
     "get_library_status": {
-        "description": "Report whether the configured shared context library root exists and is readable.",
+        "description": (
+            "Report the runtime preflight condition (healthy, missing_config, malformed_config, "
+            "unreadable_config, missing_root, or unreadable_root) with redacted, actionable "
+            "remediation. Safe to call first; never raises for a bad deployment state."
+        ),
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         "handler": get_library_status,
     },
