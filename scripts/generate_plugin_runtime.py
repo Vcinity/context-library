@@ -225,6 +225,42 @@ def _task_item(decision: Decision, state: str, source_scope: str) -> dict[str, o
     }
 
 
+_SUPPORTED_TOKENIZER = {
+    "name": "tiktoken",
+    "version": "0.9.0",
+    "vocabulary_revision": "cl100k_base",
+}
+
+# Narrow, enumerated boundary for encoder resolution/lookup failures (missing
+# dependency, corrupt or unreachable encoding cache, unsupported platform).
+_ENCODER_FAILURE_EXCEPTIONS = (ImportError, OSError, RuntimeError, ValueError, LookupError)
+
+
+def _resolve_verified_encoder(tokenizer: dict[str, object]):
+    if (
+        tokenizer.get("name") != _SUPPORTED_TOKENIZER["name"]
+        or tokenizer.get("version") != _SUPPORTED_TOKENIZER["version"]
+        or tokenizer.get("vocabulary_revision") != _SUPPORTED_TOKENIZER["vocabulary_revision"]
+    ):
+        raise ValueError(
+            "unsupported tokenizer identity: task-context accounting requires the packaged "
+            f"{_SUPPORTED_TOKENIZER['name']} {_SUPPORTED_TOKENIZER['version']} "
+            f"{_SUPPORTED_TOKENIZER['vocabulary_revision']} encoder"
+        )
+    try:
+        import tiktoken
+        return tiktoken.get_encoding(_SUPPORTED_TOKENIZER["vocabulary_revision"])
+    except _ENCODER_FAILURE_EXCEPTIONS as exc:
+        raise ValueError("tokenizer encoder is unavailable") from exc
+
+
+def _count_tokens(encoder, capsule: str) -> int:
+    try:
+        return len(encoder.encode(capsule))
+    except _ENCODER_FAILURE_EXCEPTIONS as exc:
+        raise ValueError("tokenizer encoder is unavailable") from exc
+
+
 def _render_task_context(payload: dict[str, object], decisions: tuple[Decision, ...], *, revision: str, source_scope: str) -> dict[str, object]:
     scopes = payload["repository_scopes"]
     superseded = {identifier for decision in decisions for identifier in decision.supersedes}
@@ -255,23 +291,12 @@ def _render_task_context(payload: dict[str, object], decisions: tuple[Decision, 
     uncertainties = [item for item in ordered if item["state"] == "undetermined"]
     non_operative = [item for item in ordered if item["state"] == "unsatisfied"]
     tokenizer = payload["tokenizer"]
-    budget_status = "unverified"
-    encoder = None
-    if (
-        tokenizer.get("name") == "tiktoken"
-        and tokenizer.get("version") == "0.9.0"
-        and tokenizer.get("vocabulary_revision") == "cl100k_base"
-    ):
-        try:
-            import tiktoken
-            encoder = tiktoken.get_encoding("cl100k_base")
-            budget_status = "verified"
-        except (ImportError, ValueError):
-            pass
+    encoder = _resolve_verified_encoder(tokenizer)
+    budget_status = "verified"
     capsule_lines = [f"# Task context: {payload['project']}", f"revision: {revision}", "", "## Operative directives"]
     capsule_lines.extend(f"- [{item['decision_id']}] {item['text']}" for item in operative)
     capsule = "\n".join(capsule_lines) + "\n"
-    token_count = len(encoder.encode(capsule)) if encoder is not None else 0
+    token_count = _count_tokens(encoder, capsule)
     omitted = []
     if token_count > payload["agent_token_budget"]:
         omitted = [str(item["decision_id"]) for item in operative]
