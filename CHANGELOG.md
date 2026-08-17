@@ -7,6 +7,10 @@
   evidence.
 - Document the required post-install Plugin runtime configuration step.
 
+## 0.4.2 - 2026-08-17
+
+- Rename the marketplace display name to Vcinity Engineering.
+
 ## 0.4.1 - 2026-08-17
 
 - Make generated shared-marketplace files readable by consumer Codex users.

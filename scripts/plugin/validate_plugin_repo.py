@@ -126,8 +126,8 @@ def validate_marketplace_manifest() -> None:
         fail("marketplace name must be 'context-library'")
     if not isinstance(payload.get("interface"), dict):
         fail("marketplace interface must be an object")
-    if payload["interface"].get("displayName") != "Context Library":
-        fail("marketplace displayName must be 'Context Library'")
+    if payload["interface"].get("displayName") != "Vcinity Engineering":
+        fail("marketplace displayName must be 'Vcinity Engineering'")
     plugins = payload.get("plugins")
     if not isinstance(plugins, list) or len(plugins) != 1:
         fail("marketplace must contain exactly one plugin entry")

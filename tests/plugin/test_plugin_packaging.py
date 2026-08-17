@@ -76,7 +76,7 @@ def test_plugin_archive_embeds_runtime_config_only_when_explicitly_requested(tmp
 def test_community_marketplace_entry_installs_the_local_plugin():
     marketplace = json.loads(MARKETPLACE_PATH.read_text(encoding="utf-8"))
     assert marketplace["name"] == "context-library"
-    assert marketplace["interface"]["displayName"] == "Context Library"
+    assert marketplace["interface"]["displayName"] == "Vcinity Engineering"
     assert marketplace["plugins"] == [
         {
             "name": "context-library",
