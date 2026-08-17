@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -158,6 +159,64 @@ def validate_reference_files() -> None:
         check_exists(base / name, f"reference file {name}")
 
 
+def validate_mcp_tools_inventory() -> None:
+    readme_path = ROOT / "plugins" / "context-library" / "README.md"
+    readme_text = read_text(readme_path)
+
+    # Extract marked inventory from README
+    start_marker = "<!-- CONTEXT_LIBRARY_TOOLS_INVENTORY -->"
+    end_marker = "<!-- /CONTEXT_LIBRARY_TOOLS_INVENTORY -->"
+    start_idx = readme_text.find(start_marker)
+    end_idx = readme_text.find(end_marker)
+    if start_idx < 0 or end_idx < 0:
+        fail("missing marked CONTEXT_LIBRARY_TOOLS_INVENTORY block in README.md")
+
+    inventory_block = readme_text[start_idx + len(start_marker) : end_idx]
+    readme_tools = set()
+    for line in inventory_block.strip().split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Extract tool name from "- `tool-name`: description" format
+        match = re.match(r'-\s*`([^`]+)`', line)
+        if match:
+            tool_name = match.group(1)
+            if tool_name in readme_tools:
+                fail(f"duplicate tool {tool_name!r} in README inventory")
+            readme_tools.add(tool_name)
+
+    # Extract registered tools from context_library_server.py
+    mcp_server_path = ROOT / "plugins" / "context-library" / "mcp" / "context_library_server.py"
+    mcp_tree = ast.parse(read_text(mcp_server_path), filename=str(mcp_server_path))
+    tools_value = None
+    for node in ast.walk(mcp_tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(isinstance(target, ast.Name) and target.id == "TOOLS" for target in targets):
+                tools_value = node.value
+                break
+
+    if not isinstance(tools_value, ast.Dict):
+        fail("could not find TOOLS dictionary in context_library_server.py")
+
+    registered_tools = {
+        key.value
+        for key in tools_value.keys
+        if isinstance(key, ast.Constant) and isinstance(key.value, str)
+    }
+
+    # Check for omissions and undocumented additions
+    missing_from_readme = registered_tools - readme_tools
+    if missing_from_readme:
+        missing_list = sorted(missing_from_readme)
+        fail(f"registered tools missing from README inventory: {missing_list}")
+
+    undocumented = readme_tools - registered_tools
+    if undocumented:
+        undocumented_list = sorted(undocumented)
+        fail(f"README inventory contains undocumented tools: {undocumented_list}")
+
+
 def main() -> None:
     check_exists(ROOT / "README.md", "repo README")
     check_exists(ROOT / "SPEC.md", "repo SPEC")
@@ -170,6 +229,7 @@ def main() -> None:
     validate_plugin_manifest()
     validate_marketplace_manifest()
     validate_reference_files()
+    validate_mcp_tools_inventory()
 
     print("context library plugin validation passed")
 
