@@ -147,6 +147,7 @@ def evaluate_applicability(payload: object) -> dict[str, object]:
 # the independently installable Plugin can preserve Core semantics without
 # importing the write-capable application packages.
 import hashlib
+import re
 
 
 def _require_object(value: object, message: str) -> dict[str, object]:
@@ -210,6 +211,18 @@ def validate_task_context_request(payload: object) -> dict[str, object]:
     data["tokenizer"] = dict(tokenizer)
     data["tokenizer"].setdefault("pinned", True)
     return data
+
+
+def lexical_tokens(text: str) -> tuple[str, ...]:
+    """Extract normalized lexical tokens from text for deterministic search.
+
+    Converts to lowercase and splits on whitespace and punctuation,
+    filtering empty results. Used for consistent term matching across
+    search and retrieval implementations.
+    """
+    normalized = text.lower()
+    tokens = re.split(r"[^a-z0-9]+", normalized)
+    return tuple(token for token in tokens if token)
 
 
 def _task_item(decision: Decision, state: str, source_scope: str) -> dict[str, object]:

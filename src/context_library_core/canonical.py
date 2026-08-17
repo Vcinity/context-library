@@ -366,3 +366,15 @@ def weakest_provenance(values: Iterable[str]) -> str:
     if any(value not in PROVENANCE_RANK for value in values):
         raise ValueError("unknown provenance")
     return min(values, key=PROVENANCE_RANK.__getitem__)
+
+
+def lexical_tokens(text: str) -> tuple[str, ...]:
+    """Extract normalized lexical tokens from text for deterministic search.
+
+    Converts to lowercase and splits on whitespace and punctuation,
+    filtering empty results. Used for consistent term matching across
+    search and retrieval implementations.
+    """
+    normalized = text.lower()
+    tokens = re.split(r"[^a-z0-9]+", normalized)
+    return tuple(token for token in tokens if token)

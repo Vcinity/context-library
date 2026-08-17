@@ -1,0 +1,23 @@
+{
+  "schema": "context-library/search-decisions-response",
+  "schema_version": 1,
+  "project": "demo",
+  "query": "read-only",
+  "path": "projects/demo/decision-register.md",
+  "matches": [
+    {
+      "decision_id": "decision-read-only",
+      "subject": "Read-only boundary",
+      "excerpt": "Keep the integration read-only.",
+      "provenance": "explicit",
+      "match_mode": "exact",
+      "matched_terms": ["read", "only"],
+      "superseded": [],
+      "superseded_by": [],
+      "applicability": "unconditional"
+    }
+  ],
+  "diagnostic": "exact",
+  "truncated": false,
+  "total_matches": 1
+}

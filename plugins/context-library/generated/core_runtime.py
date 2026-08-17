@@ -1,6 +1,6 @@
 # Generated from context_library_core.canonical; do not edit.
 # source-version: 0.4.2
-# source-sha256: 6f0e7c6785bd1c1ca338f20b675816a88b143bca6e33917f7a7d40f28f650a3c
+# source-sha256: 1c41e84e8c9b76b5fd06b146bbed5c4b05bf8fc44cf4f5e140d3d4c50dff5c60
 from __future__ import annotations
 
 import dataclasses
@@ -369,6 +369,18 @@ def weakest_provenance(values: Iterable[str]) -> str:
     if any(value not in PROVENANCE_RANK for value in values):
         raise ValueError("unknown provenance")
     return min(values, key=PROVENANCE_RANK.__getitem__)
+
+
+def lexical_tokens(text: str) -> tuple[str, ...]:
+    """Extract normalized lexical tokens from text for deterministic search.
+
+    Converts to lowercase and splits on whitespace and punctuation,
+    filtering empty results. Used for consistent term matching across
+    search and retrieval implementations.
+    """
+    normalized = text.lower()
+    tokens = re.split(r"[^a-z0-9]+", normalized)
+    return tuple(token for token in tokens if token)
 
 
 # Generated read-only contract metadata used by the self-contained Plugin.
@@ -814,6 +826,7 @@ def evaluate_applicability(payload: object) -> dict[str, object]:
 # the independently installable Plugin can preserve Core semantics without
 # importing the write-capable application packages.
 import hashlib
+import re
 
 
 def _require_object(value: object, message: str) -> dict[str, object]:
@@ -877,6 +890,18 @@ def validate_task_context_request(payload: object) -> dict[str, object]:
     data["tokenizer"] = dict(tokenizer)
     data["tokenizer"].setdefault("pinned", True)
     return data
+
+
+def lexical_tokens(text: str) -> tuple[str, ...]:
+    """Extract normalized lexical tokens from text for deterministic search.
+
+    Converts to lowercase and splits on whitespace and punctuation,
+    filtering empty results. Used for consistent term matching across
+    search and retrieval implementations.
+    """
+    normalized = text.lower()
+    tokens = re.split(r"[^a-z0-9]+", normalized)
+    return tuple(token for token in tokens if token)
 
 
 def _task_item(decision: Decision, state: str, source_scope: str) -> dict[str, object]:

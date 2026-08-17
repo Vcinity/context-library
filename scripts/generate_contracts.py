@@ -18,6 +18,7 @@ from context_library_core.contracts import (
     ContextResolution,
     DecisionAuditResponse,
     MissingContextNotice,
+    SearchDecisionsResponse,
     VersionEnvelope,
 )
 from context_library_core.maintainer_contracts import (
@@ -63,6 +64,7 @@ MODELS: dict[str, Type[BaseModel]] = {
     "retrieval-benchmark-gold-v1": RetrievalBenchmarkGold,
     "retrieval-benchmark-report-v1": RetrievalBenchmarkReport,
     "retrieval-benchmark-task-v1": RetrievalBenchmarkTask,
+    "search-decisions-response-v1": SearchDecisionsResponse,
     "task-context-request-v1": TaskContextRequest,
     "task-context-response-v1": TaskContextResponse,
     "source-envelope-v1": SourceEnvelope,

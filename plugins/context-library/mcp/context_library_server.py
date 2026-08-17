@@ -15,6 +15,7 @@ from generated.core_runtime import (  # noqa: E402
     PRODUCT_VERSION,
     build_decision_audit,
     discover_packs,
+    lexical_tokens,
     parse_register,
     resolve_pack,
     resolve_task_context,
@@ -208,9 +209,13 @@ def search_decisions(args: dict[str, Any] | None = None) -> dict[str, Any]:
 
     artifact = read_project_artifact({"project": project, "artifact": "decision-register"})
     decisions = parse_register(artifact["text"])
-    matches: list[dict[str, Any]] = []
+
     query_lower = query.lower()
-    for decision in decisions:
+    query_tokens = lexical_tokens(query)
+
+    # Build searchable text and identify candidates
+    candidates: list[tuple[int, int, str, set[str], bool]] = []  # (order_idx, term_count, decision_id, matched_terms, is_exact)
+    for order_idx, decision in enumerate(decisions):
         searchable = "\n".join(
             (
                 decision.decision_id,
@@ -220,24 +225,76 @@ def search_decisions(args: dict[str, Any] | None = None) -> dict[str, Any]:
                 *(str(value) for value in decision.metadata.values()),
             )
         )
-        if query_lower in searchable.lower():
-            matches.append(
-                {
-                    "decision_id": decision.decision_id,
-                    "subject": decision.subject,
-                    "excerpt": decision.decision,
-                    "provenance": decision.provenance,
-                }
-            )
-            if len(matches) >= max_results:
-                break
+        searchable_lower = searchable.lower()
+        is_exact = query_lower in searchable_lower
+
+        if is_exact:
+            candidates.append((order_idx, len(query_tokens), decision.decision_id, set(query_tokens), True))
+        else:
+            decision_tokens = lexical_tokens(searchable)
+            matched_terms = set(query_tokens) & set(decision_tokens)
+            if matched_terms:
+                candidates.append((order_idx, len(matched_terms), decision.decision_id, matched_terms, False))
+
+    # Determine diagnostic and sort
+    diagnostic = "no-match"
+    if candidates:
+        if any(is_exact for _, _, _, _, is_exact in candidates):
+            diagnostic = "exact"
+            candidates = [c for c in candidates if c[4]]
+        else:
+            diagnostic = "lexical"
+
+    # Sort: by term count (desc), then by order (asc), then by decision_id (stable)
+    candidates.sort(key=lambda x: (-x[1], x[0], x[2]))
+
+    # Build response with full decision details
+    total_matches = len(candidates)
+    truncated = total_matches > max_results
+    matches: list[dict[str, Any]] = []
+
+    for order_idx, term_count, decision_id, matched_terms, is_exact in candidates[:max_results]:
+        decision = next(d for d in decisions if d.decision_id == decision_id)
+        match_mode = "exact" if is_exact else "lexical"
+        matches.append(
+            {
+                "decision_id": decision.decision_id,
+                "subject": decision.subject,
+                "excerpt": decision.decision,
+                "provenance": decision.provenance,
+                "match_mode": match_mode,
+                "matched_terms": sorted(matched_terms),
+                "superseded": list(decision.supersedes),
+                "superseded_by": [],
+                "applicability": _decision_applicability_state(decision),
+            }
+        )
+
+    # Compute superseded_by relationships
+    by_id = {d.decision_id: d for d in decisions}
+    for match in matches:
+        for candidate_id in by_id:
+            if match["decision_id"] in by_id[candidate_id].supersedes:
+                match["superseded_by"].append(candidate_id)
 
     return {
+        "schema": "context-library/search-decisions-response",
+        "schema_version": 1,
         "project": project,
         "query": query,
         "path": artifact["path"],
         "matches": matches,
+        "diagnostic": diagnostic,
+        "truncated": truncated,
+        "total_matches": total_matches,
     }
+
+
+def _decision_applicability_state(decision: Any) -> str:
+    """Determine applicability state from decision fields."""
+    if decision.applies_when:
+        return "undetermined"
+    return "unconditional"
 
 
 def get_task_context(args: dict[str, Any] | None = None) -> dict[str, Any]:
