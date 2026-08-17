@@ -42,8 +42,8 @@ the packaged encoder before applying the budget; if over budget, it returns a
 deterministic incomplete/truncated result with omitted IDs and a truthful
 `budget_status=verified`. No unverified result is returned. Core raises a plain
 `ValueError` for this rejection, matching the existing malformed-request
-convention; the MCP boundary already converts `ValueError` to `McpError` and
-must not import Plugin code.
+convention; Core must not import Plugin code to raise `McpError` directly, and
+the MCP boundary already converts that `ValueError` to `McpError`.
 
 Encoder resolution and encoding must sit behind one narrow, enumerated
 exception boundary in both the authoritative Core renderer and generated
