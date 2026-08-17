@@ -312,7 +312,29 @@ TOOLS: dict[str, dict[str, Any]] = {
                 "operation": {"type": "string"},
                 "repository_scopes": {"type": "array", "items": {"type": "string"}},
                 "agent_token_budget": {"type": "integer", "minimum": 0},
-                "tokenizer": {"type": "object", "additionalProperties": False},
+                "tokenizer": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Tokenizer name (e.g., 'tiktoken')"},
+                        "version": {"type": "string", "description": "Tokenizer version (e.g., '0.9.0')"},
+                        "vocabulary_revision": {
+                            "type": "string",
+                            "description": "Vocabulary identifier (e.g., 'cl100k_base')",
+                        },
+                        "accounting_method": {
+                            "type": "string",
+                            "description": "Method for counting tokens (e.g., 'offline')",
+                        },
+                        "pinned": {
+                            "type": "boolean",
+                            "const": True,
+                            "default": True,
+                            "description": "Must be true to support deterministic token counting",
+                        },
+                    },
+                    "required": ["name", "version", "vocabulary_revision", "accounting_method"],
+                    "additionalProperties": False,
+                },
             },
             "required": ["project", "task_summary", "operation", "repository_scopes", "agent_token_budget", "tokenizer"],
             "additionalProperties": False,
