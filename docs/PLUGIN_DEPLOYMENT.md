@@ -41,7 +41,7 @@ release to values approved for the deployment:
 
 ```sh
 REPOSITORY_URL="<context-library-repository-url>"
-RELEASE=v0.4.4
+RELEASE=v0.4.5
 SOURCE_ROOT=/opt/context-library-plugin-source
 
 git clone \
@@ -153,6 +153,14 @@ same classification when the runtime is not usable.
 | `missing_root`        | The configured library root path does not exist.                    | Verify the mount/path, then reconfigure if it moved.                  |
 | `unreadable_root`     | The configured library root exists but is not readable.              | Grant the Plugin process read/traverse access to the root.            |
 
+The trusted session-start hook performs this preflight before resolving
+context policy. For any condition other than `healthy`, it emits a structured
+blocking result (`status=blocked`, `disposition=stop`, and the condition) and
+exits with status `2`. Fix the configuration/access, explicitly disable the
+context policy, or uninstall the Plugin before continuing. This stop applies
+even when a broken configuration declares `disabled`; a successfully
+preflighted disabled policy remains silent.
+
 `CONTEXT_LIBRARY_ROOT` always takes precedence over the bundled
 `runtime-config.json`, including when the bundled file is malformed: an
 active environment override is classified on its own, never blocked by a
@@ -224,7 +232,7 @@ run the post-install configuration step above, and then register that existing
 root:
 
 ```sh
-MARKETPLACE_ROOT=/srv/shared/context-library-plugin-v0.4.4
+MARKETPLACE_ROOT=/srv/shared/context-library-plugin-v0.4.5
 
 codex plugin marketplace add "$MARKETPLACE_ROOT"
 codex plugin add context-library@context-library

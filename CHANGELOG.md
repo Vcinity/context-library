@@ -3,6 +3,13 @@
 ## Unreleased
 
 - Add the deterministic offline full-system acceptance harness used by `make e2e`.
+- Make installed Plugin runtime failures stop session-start work with a
+  structured condition and explicit fix, disable, or uninstall recovery.
+
+## 0.4.5 - 2026-08-18
+
+- Stop agent session-start work when an installed Plugin runtime is
+  inaccessible, with structured recovery guidance.
 
 - Add an evidence-backed roadmap for multi-project management, shared-context
   inheritance, review-authorized publication, and production autonomy

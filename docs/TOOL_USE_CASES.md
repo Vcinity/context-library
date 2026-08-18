@@ -32,9 +32,12 @@ Use `get_library_status` at the start of a task when the host configuration or
 context policy makes availability relevant. It reports whether the configured
 `CONTEXT_LIBRARY_ROOT` exists and is readable.
 
-If the result is unavailable, follow the project’s context policy: required
-context produces an advisory notice, while optional or undetermined context
-does not block work. Never invent a decision-register replacement.
+If the result is unavailable, follow the project’s context policy after
+checking the installed Plugin runtime. A session-start runtime failure is a
+blocking stop with fix, disable, or uninstall recovery; once runtime preflight
+is healthy, required context produces an advisory notice while optional or
+undetermined context does not block work. Never invent a decision-register
+replacement.
 
 ### 2. Select a project pack
 

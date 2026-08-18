@@ -416,7 +416,6 @@ class ProjectionTests(unittest.TestCase):
         )
         self.assertEqual(hook.returncode, 0)
         self.assertNotIn("Traceback", hook.stdout + hook.stderr)
-        self.assertEqual(hook.stdout, "")
 
     def test_environment_project_override_and_stable_cli_exit_codes(self) -> None:
         self.workspace.configure(project="unavailable")

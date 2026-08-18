@@ -3,12 +3,23 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import projection  # noqa: E402
+
+BLOCKING_RUNTIME_CONDITIONS = frozenset(
+    {
+        projection.runtime_config.CONDITION_MISSING_CONFIG,
+        projection.runtime_config.CONDITION_MALFORMED_CONFIG,
+        projection.runtime_config.CONDITION_UNREADABLE_CONFIG,
+        projection.runtime_config.CONDITION_MISSING_ROOT,
+        projection.runtime_config.CONDITION_UNREADABLE_ROOT,
+    }
+)
 
 
 def required_notice(
@@ -31,15 +42,46 @@ def required_notice(
     )
 
 
-def main() -> None:
+def blocking_runtime_notice(status: object) -> None:
+    condition = getattr(status, "condition")
+    remediation = getattr(status, "remediation") or "Fix the Plugin runtime configuration or access."
+    message = (
+        "Context Library Plugin stopped session-start work because its installed "
+        f"runtime is inaccessible ({condition}). Fix the configuration or library "
+        "access, explicitly disable the context policy, or uninstall the Plugin "
+        "before continuing."
+    )
+    print(
+        json.dumps(
+            {
+                "schema": "context-library/session-start-result",
+                "schema_version": 1,
+                "status": "blocked",
+                "disposition": "stop",
+                "runtime_condition": condition,
+                "message": message,
+                "remediation": remediation,
+                "recovery": ["fix_configuration", "disable", "uninstall"],
+            },
+            sort_keys=True,
+        )
+    )
+    print(message, file=sys.stderr)
+
+
+def main() -> int:
     root = projection.activation_root()
+    preflight = projection.runtime_config.preflight()
+    if preflight.condition in BLOCKING_RUNTIME_CONDITIONS:
+        blocking_runtime_notice(preflight)
+        return projection.EXIT_ERROR
     try:
         requirement_setting = projection.context_requirement_setting()
         environment_requirement = requirement_setting.value
     except projection.ProjectionError:
-        return
+        return projection.EXIT_OK
     if environment_requirement == "disabled":
-        return
+        return projection.EXIT_OK
     try:
         policy = projection.resolve_context_policy(root)
     except (OSError, projection.ProjectionError) as exc:
@@ -50,9 +92,9 @@ def main() -> None:
             source = source or exc.source
         if requirement == "required":
             required_notice(projection.resolution_classification(exc), exc, project=None, source=source)
-        return
+        return projection.EXIT_OK
     if policy.requirement in {"disabled", "undetermined"}:
-        return
+        return projection.EXIT_OK
     if policy.project is None:
         if policy.requirement == "required":
             required_notice(
@@ -61,11 +103,11 @@ def main() -> None:
                 project=None,
                 source=policy.source,
             )
-        return
+        return projection.EXIT_OK
     try:
         projection.check(root, automatic=True)
         print(f"Context Library projection already current in {root}.")
-        return
+        return projection.EXIT_OK
     except projection.CheckError:
         try:
             changed = projection.sync(root, automatic=True)
@@ -77,9 +119,9 @@ def main() -> None:
                     project=policy.project,
                     source=policy.source,
                 )
-            return
+            return projection.EXIT_OK
         print(f"Context Library projection {'updated' if changed else 'already current'} in {root}.")
-        return
+        return projection.EXIT_OK
     except (OSError, projection.ProjectionError) as exc:
         if policy.requirement == "required":
             required_notice(
@@ -88,22 +130,33 @@ def main() -> None:
                 project=policy.project,
                 source=policy.source,
             )
-        return
+        return projection.EXIT_OK
+
+    return projection.EXIT_OK
 
 
 def diagnostics() -> dict[str, object]:
     root = projection.activation_root()
-    policy = projection.resolve_context_policy(root)
+    preflight = projection.runtime_config.preflight()
     result: dict[str, object] = {
         "root": str(root),
-        "requirement": policy.requirement,
-        "project": policy.project,
-        "requirement_source": policy.source,
+        "requirement": None,
+        "project": None,
+        "requirement_source": None,
         "availability": None,
-        "runtime_condition": None,
+        "runtime_condition": preflight.condition if not preflight.allowed else None,
+        "installation_state": "healthy" if preflight.allowed else "inaccessible",
+        "disposition": "continue" if preflight.allowed else "stop",
         "source_digest": None,
         "projection_fresh": None,
     }
+    if not preflight.allowed:
+        result["availability"] = "runtime-inaccessible"
+        return result
+    policy = projection.resolve_context_policy(root)
+    result["requirement"] = policy.requirement
+    result["project"] = policy.project
+    result["requirement_source"] = policy.source
     if policy.requirement == "disabled":
         return result
     if policy.project is None:
@@ -127,4 +180,4 @@ def diagnostics() -> dict[str, object]:
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

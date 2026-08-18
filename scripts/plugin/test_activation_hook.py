@@ -58,11 +58,19 @@ def configure(root: Path, requirement: str, *, project: str | None = "demo") -> 
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
+def blocked(root: Path, library: Path, override: Path | None = None) -> tuple[str, str]:
+    try:
+        run(root, library, override)
+    except subprocess.CalledProcessError as exc:
+        return exc.stdout, exc.stderr
+    raise AssertionError("expected the installed Plugin hook to stop")
+
+
 def assert_no_interference(root: Path, library: Path, requirement: str | None) -> None:
     root.mkdir()
     (root / "AGENTS.md").write_text("# Human guidance\n", encoding="utf-8")
     if requirement is not None:
-        configure(root, requirement)
+        configure(root, requirement, project="absent")
     before = (root / "AGENTS.md").read_bytes()
     output = run(root, library, root)
     assert output == ""
@@ -74,17 +82,20 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         base = Path(tmpdir)
         unavailable = base / "unavailable-library"
+        available = base / "available-library"
+        shutil.copytree(FIXTURE_LIBRARY, available)
+        shutil.rmtree(available / "projects/demo")
 
-        assert_no_interference(base / "undetermined", unavailable, None)
-        assert_no_interference(base / "optional", unavailable, "optional")
-        assert_no_interference(base / "disabled", unavailable, "disabled")
+        assert_no_interference(base / "undetermined", available, None)
+        assert_no_interference(base / "optional", available, "optional")
+        assert_no_interference(base / "disabled", available, "disabled")
 
         required = base / "required"
         required.mkdir()
         (required / "AGENTS.md").write_text("# Human guidance\n", encoding="utf-8")
         configure(required, "required")
         before = (required / "AGENTS.md").read_bytes()
-        notice = run(required, unavailable, required)
+        notice = run(required, available, required)
         assert "required-context notice" in notice
         assert "without fabricated context" in notice
         assert "Context Library Manager" in notice
@@ -96,7 +107,7 @@ def main() -> None:
         missing_project = base / "missing-project"
         missing_project.mkdir()
         configure(missing_project, "required", project=None)
-        notice = run(missing_project, unavailable, missing_project)
+        notice = run(missing_project, available, missing_project)
         assert "no project was explicitly selected" in notice
         assert "classification=ambiguous" in notice
 
@@ -107,7 +118,7 @@ def main() -> None:
         assert (
             run(
                 malformed_disabled,
-                unavailable,
+                available,
                 malformed_disabled,
                 environment_requirement="disabled",
             )
@@ -121,9 +132,23 @@ def main() -> None:
         payload = json.loads(config.read_text(encoding="utf-8"))
         payload["schema_version"] = 99
         config.write_text(json.dumps(payload), encoding="utf-8")
-        notice = run(invalid_required, unavailable, invalid_required)
+        notice = run(invalid_required, available, invalid_required)
         assert "classification=invalid" in notice
         assert "requirement_source=" in notice
+
+        for requirement in (None, "required", "optional", "disabled"):
+            inaccessible = base / f"inaccessible-{requirement or 'undetermined'}"
+            inaccessible.mkdir()
+            if requirement is not None:
+                configure(inaccessible, requirement)
+            stdout, stderr = blocked(inaccessible, unavailable, inaccessible)
+            result = json.loads(stdout)
+            assert result["status"] == "blocked"
+            assert result["disposition"] == "stop"
+            assert result["runtime_condition"] == "missing_root"
+            assert result["recovery"] == ["fix_configuration", "disable", "uninstall"]
+            assert "stopped session-start work" in stderr
+            assert not (inaccessible / ".context-library/projection.json").exists()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         base = Path(tmpdir)
