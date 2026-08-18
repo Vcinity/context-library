@@ -488,7 +488,7 @@ def _stage_and_isolate(temporary: Path, library: Path) -> dict[str, Any]:
             "--library-root",
             str(library),
             "--marketplace-name",
-            "vcinity-eng",
+            "issue49-e2e",
             "--project",
             "demo",
             "--context-requirement",
@@ -499,11 +499,7 @@ def _stage_and_isolate(temporary: Path, library: Path) -> dict[str, Any]:
     manifest = json.loads((destination / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
     plugin_root = destination / "plugins/context-library"
     plugin_manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-    if (
-        manifest.get("name") != "vcinity-eng"
-        or manifest.get("interface", {}).get("displayName") != "Vcinity Engineering"
-        or plugin_manifest.get("version") != VERSION
-    ):
+    if manifest.get("name") != "issue49-e2e" or plugin_manifest.get("version") != VERSION:
         raise E2EFailure("staged marketplace or Plugin version is inconsistent", "version_mismatch")
     files = [path for path in plugin_root.rglob("*") if path.is_file() and path.name != "runtime-config.json"]
     secret = b"e2e-secret"
@@ -514,7 +510,7 @@ def _stage_and_isolate(temporary: Path, library: Path) -> dict[str, Any]:
             raise E2EFailure(f"staged Plugin contains fixture-private content: {path}", "artifact_isolation")
     return {
         "product_version": VERSION,
-        "marketplace": manifest.get("interface", {}).get("displayName"),
+        "marketplace": manifest.get("name"),
         "files": len(files),
         "runtime_config": str(plugin_root / "runtime-config.json"),
     }
