@@ -75,11 +75,16 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
   has a fresh producer, not whether every replica is healthy. Missing or late
   producer heartbeats remain telemetry-completeness failures under
   `docs/DEPLOYMENT.md` and SPEC §11.5.
+- Restart-safe selection does not prune historical `process_heartbeats` rows.
+  This issue explicitly accepts that existing retention behavior as a
+  separately tracked follow-up; the implementation must not delete history as
+  part of a health read, and a future retention change must preserve the
+  diagnostic evidence contract.
 - SQL portability must be checked against the supported SQLite and PostgreSQL
   dialects; use a window function rather than engine-specific syntax.
 
 ## Unresolved questions
 
-None for the bounded single-effective-instance contract. Replica-aware
-aggregation remains outside this issue unless current deployment evidence
-shows multiple active instances per role.
+The bounded issue contract does not include heartbeat retention/pruning;
+unbounded historical-row growth is a known operational follow-up. Replica
+aware role-level aggregation is included as specified above.
