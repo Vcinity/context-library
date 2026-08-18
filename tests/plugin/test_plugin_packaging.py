@@ -33,6 +33,16 @@ def load_install_module():
     return module
 
 
+def load_smoke_helpers():
+    spec = importlib.util.spec_from_file_location(
+        "context_library_smoke_helpers", ROOT / "scripts/plugin/smoke_mcp_server.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_plugin_archive_is_deterministic_and_excludes_runtime_caches(tmp_path):
     build = load_build_module()
     build.OUTPUT = tmp_path / build.OUTPUT.name
@@ -71,6 +81,77 @@ def test_plugin_archive_embeds_runtime_config_only_when_explicitly_requested(tmp
         assert archive.namelist() == sorted(archive.namelist())
         embedded = json.loads(archive.read("context-library/runtime-config.json"))
     assert embedded["library_root"] == str(library)
+
+
+def test_packaged_mcp_launch_is_independent_of_caller_working_directory(tmp_path):
+    build = load_build_module()
+    smoke = load_smoke_helpers()
+    build.OUTPUT = tmp_path / build.OUTPUT.name
+    assert build.main() == 0
+
+    manifest = json.loads((ROOT / "plugins/context-library/.mcp.json").read_text(encoding="utf-8"))
+    server = manifest["mcpServers"]["context_library"]
+    assert server["command"] == "python3"
+    assert server["args"] == ["${PLUGIN_ROOT}/mcp/context_library_server.py"]
+    assert "cwd" not in server
+
+    unrelated_cwd = tmp_path / "consumer-workspace"
+    unrelated_cwd.mkdir()
+    destinations = (
+        tmp_path / "release-v0.4.2" / "marketplace",
+        tmp_path / "consumer-cache" / "nested" / "plugin-install",
+    )
+    for destination in destinations:
+        destination.mkdir(parents=True)
+        with zipfile.ZipFile(build.OUTPUT) as archive:
+            archive.extractall(destination)
+        plugin_root = destination / "context-library"
+        server_path = plugin_root / "mcp/context_library_server.py"
+        assert server_path.is_file()
+
+        for _ in range(2):
+            proc = subprocess.Popen(
+                [server["command"], str(server["args"][0].replace("${PLUGIN_ROOT}", str(plugin_root)))],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=unrelated_cwd,
+            )
+            try:
+                initialized = smoke.request(
+                    proc,
+                    1,
+                    "initialize",
+                    {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "packaged-launch-test", "version": "1.0"},
+                    },
+                    framed=True,
+                )["serverInfo"]
+                tools = smoke.request(proc, 2, "tools/list", framed=True)["tools"]
+            finally:
+                proc.terminate()
+                proc.wait(timeout=5)
+            assert initialized["name"] == "context-library"
+            assert {tool["name"] for tool in tools} >= {
+                "get_library_status",
+                "list_project_packs",
+                "read_project_artifact",
+                "search_decisions",
+                "get_task_context",
+                "read_decision_audit",
+            }
+
+        missing = plugin_root / "mcp/missing_server.py"
+        failed = subprocess.run(
+            [server["command"], str(missing)],
+            cwd=unrelated_cwd,
+            capture_output=True,
+            text=True,
+        )
+        assert failed.returncode != 0
+        assert str(missing) in failed.stderr
 
 
 def test_community_marketplace_entry_installs_the_local_plugin():
