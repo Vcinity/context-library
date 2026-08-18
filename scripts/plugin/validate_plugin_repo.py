@@ -98,10 +98,10 @@ def validate_plugin_manifest() -> None:
     if server.get("command") != "python3":
         fail("context_library MCP server command must be python3")
     args = server.get("args")
-    if args != ["./mcp/context_library_server.py"]:
-        fail("context_library MCP server args must use ./mcp/context_library_server.py")
-    if server.get("cwd") != "./":
-        fail("context_library MCP server cwd must be './'")
+    if args != ["${PLUGIN_ROOT}/mcp/context_library_server.py"]:
+        fail("context_library MCP server args must use ${PLUGIN_ROOT}/mcp/context_library_server.py")
+    if "cwd" in server:
+        fail("context_library MCP server must not depend on a caller-relative cwd")
     check_exists(ROOT / "plugins" / "context-library" / "mcp" / "context_library_server.py", "MCP server")
     generated = read_text(ROOT / "plugins" / "context-library" / "generated" / "core_runtime.py")
     if f"PRODUCT_VERSION = {VERSION!r}" not in generated:
