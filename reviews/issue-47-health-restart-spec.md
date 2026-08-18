@@ -34,13 +34,17 @@ instance and a fresh post-restart instance.
 
 ## Proposed contract and design
 
-Change `runtime_health_data()` to select the newest heartbeat row per producer
-process before applying `heartbeat_health()`. The selected row remains
-visible with its actual `instance_id`, `observed_at`, and freshness state.
-Missing expected processes still produce the existing `not-observed` offline
-entry. If the newest instance is stale, the role remains degraded/offline;
-the fix only removes superseded historical instances from the active
-aggregation.
+Change `runtime_health_data()` to aggregate service health per producer role
+across the documented multi-replica topology. For each process, select the
+freshest currently fresh instance (healthy or degraded) as the active service
+health representative. If no instance is fresh, select the newest observed
+row so the role remains visibly degraded/offline. A fresh post-restart
+instance therefore supersedes stale historical rows, while another healthy
+replica can continue to represent an otherwise available role. The selected
+row remains visible with its actual `instance_id`, `observed_at`, and freshness
+state. Missing expected processes still produce the existing `not-observed`
+offline entry. Telemetry completeness remains responsible for detecting
+missing producer instances; this endpoint reports role-level service health.
 
 Use a portable SQL window query supported by the repository's SQLite and
 PostgreSQL targets. Preserve read-only behavior and existing public redaction.
@@ -48,7 +52,7 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 ## Affected files/components
 
 - `src/context_library_manager/api.py`
-- `tests/manager/test_runtime_observability.py` or `tests/manager/test_runtime.py`
+- `tests/manager/test_runtime_observability.py`
 - `docs/DEPLOYMENT.md` if the operational health explanation needs updating
 
 ## Test strategy and commands
@@ -56,6 +60,9 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 - Seed an offline old instance and a fresh healthy replacement for the same
   process, call `GET /api/v1/health`, and assert aggregate `healthy` plus the
   replacement `instance_id`.
+- Seed two instances for one process, with one fresh and one stale, and assert
+  role-level health uses the fresh instance while preserving the selected
+  identity in the response.
 - Assert a genuinely stale newest instance remains non-healthy.
 - Assert existing missing-process and public-redaction behavior remains.
 - Run focused Manager tests, then `make test`, `make check`, `make e2e`,
@@ -64,11 +71,10 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 
 ## Risks
 
-- If multiple active replicas exist for one process role, selecting only the
-  newest row could hide a separate unhealthy replica. The current issue and
-  observed deployment use one effective producer per role; preserve selected
-  identity in the response and add a follow-up if replica-aware health is
-  required by deployment evidence.
+- Role-level health intentionally answers whether the service role currently
+  has a fresh producer, not whether every replica is healthy. Missing or late
+  producer heartbeats remain telemetry-completeness failures under
+  `docs/DEPLOYMENT.md` and SPEC §11.5.
 - SQL portability must be checked against the supported SQLite and PostgreSQL
   dialects; use a window function rather than engine-specific syntax.
 
