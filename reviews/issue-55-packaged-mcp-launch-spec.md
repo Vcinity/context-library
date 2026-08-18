@@ -41,13 +41,16 @@ expansion. `${PLUGIN_ROOT}` relocates with the installed Plugin and does not
 expose deployment paths. The packaging validator will require this exact
 launch form.
 
-The test will build a deterministic archive, extract it into a temporary
-release destination, substitute the staged destination for `${PLUGIN_ROOT}`
-as the host launcher would, and invoke the server from a separate working
-directory. It will assert successful initialization, `serverInfo`, and
-`tools/list`, then terminate and repeat the launch. A missing staged server
-path will be reported as a launch failure by the test rather than being
-classified as a canonical-library configuration error.
+The test will build a deterministic archive and exercise two distinct
+relocation shapes: (1) a release-specific staged destination produced through
+`scripts/install_plugin.py --stage-only`, and (2) a differently nested,
+consumer-cache-style destination. Each substitutes its own staged destination
+for `${PLUGIN_ROOT}` as the host launcher would and invokes the server from a
+separate working directory. Each scenario will assert successful
+initialization, `serverInfo`, and `tools/list`, then terminate and repeat the
+launch. A missing staged server path will be reported as a host launch failure
+with the resolved path and recovery guidance in the test/deployment evidence,
+not classified as a canonical-library configuration error.
 
 ## Affected files/components
 
@@ -67,6 +70,10 @@ classified as a canonical-library configuration error.
 - Obtain host-contract evidence from upstream documentation or an authorized
   live smoke test; the archive test alone is not sufficient evidence that the
   host expands the variable.
+- Assert that a deliberately missing staged server path is reported with the
+  resolved launch path and remediation pointing to the staged destination or
+  Plugin reinstall; this is host-launch evidence, not a runtime-config
+  condition.
 - Run focused Plugin tests, `make plugin-check`, and `git diff --check`.
 - Run the applicable root checks after integration.
 
@@ -77,6 +84,11 @@ classified as a canonical-library configuration error.
   Plugin hook configuration is only a repository precedent, not proof of MCP
   argument expansion. The validator, packaged launch test, deployment note,
   and installed-host smoke verification keep the contract explicit.
+- Host-level process-spawn failures occur before Plugin Python code runs and
+  cannot be classified by `runtime_config.py`. Acceptance evidence must
+  distinguish host command-resolution failures (resolved path plus recovery
+  guidance) from launched-process startup failures; neither is a
+  canonical-root condition.
 - A test that launches source files instead of the archive would miss the
   relocation defect; the test must extract and execute the archive.
 - The test must use synthetic temporary data only and never point runtime
