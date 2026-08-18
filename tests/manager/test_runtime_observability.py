@@ -42,6 +42,62 @@ def test_production_heartbeat_loop_runs_independently_of_worker_work(tmp_path):
     assert counts["agent"] >= 2
 
 
+def test_heartbeat_instances_use_distinct_ids_even_with_same_process_pid(tmp_path):
+    app, _ = app_and_client(tmp_path)
+    stops = [threading.Event(), threading.Event()]
+    threads = [
+        threading.Thread(target=_heartbeat_loop, args=("worker", app.state.settings, stop, 0.01))
+        for stop in stops
+    ]
+    for thread in threads:
+        thread.start()
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline:
+        rows = app.state.store.db.execute(
+            "SELECT instance_id FROM process_heartbeats WHERE process='worker'"
+        ).fetchall()
+        if len(rows) >= 2:
+            break
+        time.sleep(0.01)
+    for stop in stops:
+        stop.set()
+    for thread in threads:
+        thread.join(timeout=1)
+    rows = app.state.store.db.execute(
+        "SELECT instance_id FROM process_heartbeats WHERE process='worker'"
+    ).fetchall()
+    assert len(rows) == 2
+    assert len({row["instance_id"] for row in rows}) == 2
+
+
+def test_restart_health_uses_newest_instance_and_shared_agent_summary(tmp_path):
+    app, client = app_and_client(tmp_path)
+    store = app.state.store
+    for process in ("worker", "scheduler", "notification", "reconciliation"):
+        store.heartbeat(process, f"{process}-current")
+    store.heartbeat("worker", "worker-old")
+    store.db.execute(
+        "UPDATE process_heartbeats SET observed_at=? WHERE process=? AND instance_id=?",
+        (timestamp(120), "worker", "worker-old"),
+    )
+    store.db.commit()
+
+    scoped = client.get("/api/v1/projects/demo/health")
+    assert scoped.status_code == 200
+    data = scoped.json()["data"]
+    worker = next(item for item in data["heartbeats"] if item["process"] == "worker")
+    assert data["status"] == "healthy"
+    assert worker["instance_id"] == "worker-current"
+    assert worker["state"] == "healthy"
+
+    public = client.get("/api/v1/health").json()["data"]
+    public_worker = next(item for item in public["heartbeats"] if item["process"] == "worker")
+    assert public_worker["instance_id"] == "observed"
+
+    summary = client.get("/api/v1/agent-service").json()["data"]
+    assert summary["health"] == "healthy"
+
+
 def test_runtime_health_reports_process_freshness_backlogs_and_failures(tmp_path):
     app, client = app_and_client(tmp_path)
     store = app.state.store

@@ -25,6 +25,14 @@ every 30 seconds. `CLM_PROCESS_INTERVAL_SECONDS` may be set from 1 through 45
 seconds. `CLM_PROCESS_ONCE=true` is reserved for local diagnostics and tests,
 not production.
 
+Each process instance uses a unique heartbeat `instance_id` that is stable for
+that process lifetime and distinct across hosts, containers, and PID reuse.
+The project-scoped health response exposes the selected diagnostic identity;
+the public health response redacts it. After a restart, inspect the newest
+selected instance rather than treating historical heartbeat rows as active
+producers. Telemetry completeness remains the authority for missing or late
+replica heartbeats.
+
 The agent adapter is a separate bounded process invoked only for semantic work.
 Every deployed producer in the active telemetry manifest must emit a heartbeat
 at least every 60 seconds. Missing or late heartbeats make telemetry incomplete
