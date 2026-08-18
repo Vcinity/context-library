@@ -116,10 +116,12 @@ regression evidence. The root gates required for closure are `make test`,
 
 ## Risks and unresolved questions
 
-- The current `make e2e` target assumes `@playwright/test`; the implementation
-  must either make the locked dependency available or report a deterministic
-  repository configuration failure rather than silently omitting browser
-  coverage.
+- The existing browser harness selects `channel: "chrome"` in
+  `playwright.config.ts`, so it depends on a system Chrome/Chromium binary in
+  addition to the locked npm package. The implementation must treat that
+  already-documented local boundary as an explicit prerequisite or fail with a
+  deterministic, classified configuration error when the channel is absent;
+  it must never silently omit browser coverage.
 - Some existing recovery seams are asynchronous. The harness must use bounded
   deterministic polling or direct local fakes, never sleeps that depend on
   deployment timing.
