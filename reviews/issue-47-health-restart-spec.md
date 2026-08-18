@@ -34,15 +34,19 @@ instance and a fresh post-restart instance.
 
 ## Proposed contract and design
 
-Change `runtime_health_data()` to aggregate service health per producer role
+Change process startup heartbeat identity and `runtime_health_data()` to
+aggregate service health per producer role
 across the documented multi-replica topology. For each process, select the
 freshest currently fresh instance (healthy or degraded) as the active service
 health representative. If no instance is fresh, select the newest observed
 row so the role remains visibly degraded/offline. A fresh post-restart
 instance therefore supersedes stale historical rows, while another healthy
-replica can continue to represent an otherwise available role. The selected
-row remains visible with its actual `instance_id`, `observed_at`, and freshness
-state. Missing expected processes still produce the existing `not-observed`
+replica can continue to represent an otherwise available role. Each process
+instance must generate a unique identifier that cannot collide across hosts,
+containers, or PID reuse; it is created once and reused for that process's
+heartbeat loop. The selected row remains visible with its actual
+`instance_id`, `observed_at`, and freshness state. Missing expected processes
+still produce the existing `not-observed`
 offline entry. Telemetry completeness remains responsible for detecting
 missing producer instances; this endpoint reports role-level service health.
 
@@ -52,17 +56,21 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 ## Affected files/components
 
 - `src/context_library_manager/api.py`
+- `src/context_library_manager/processes.py`
 - `tests/manager/test_runtime_observability.py`
 - `docs/DEPLOYMENT.md` if the operational health explanation needs updating
 
 ## Test strategy and commands
 
 - Seed an offline old instance and a fresh healthy replacement for the same
-  process, call `GET /api/v1/health`, and assert aggregate `healthy` plus the
-  replacement `instance_id`.
+  process, call the project-scoped health endpoint, and assert aggregate
+  `healthy` plus the replacement `instance_id`.
 - Seed two instances for one process, with one fresh and one stale, and assert
   role-level health uses the fresh instance while preserving the selected
   identity in the response.
+- Assert the public `/api/v1/health` endpoint still redacts instance IDs to
+  `observed`/`not-observed` while the project-scoped endpoint exposes the
+  diagnostic identity to authorized operators.
 - Assert a genuinely stale newest instance remains non-healthy.
 - Assert existing missing-process and public-redaction behavior remains.
 - Run focused Manager tests, then `make test`, `make check`, `make e2e`,
@@ -75,6 +83,9 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
   has a fresh producer, not whether every replica is healthy. Missing or late
   producer heartbeats remain telemetry-completeness failures under
   `docs/DEPLOYMENT.md` and SPEC §11.5.
+- Instance IDs must include a per-process unique value rather than only a role
+  and reusable PID; otherwise concurrent containers can overwrite one
+  another's durable row and invalidate the multi-replica contract.
 - Restart-safe selection does not prune historical `process_heartbeats` rows.
   This issue explicitly accepts that existing retention behavior as a
   separately tracked follow-up; the implementation must not delete history as
