@@ -10,6 +10,7 @@ import re
 import secrets
 import threading
 import time
+import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -86,6 +87,16 @@ from .web import ROOT as WEB_ROOT
 from .web import render as render_template
 
 
+def _latest_process_heartbeats(store) -> list:
+    return store.db.execute(
+        "SELECT process,instance_id,state,details,observed_at FROM ("
+        "SELECT process,instance_id,state,details,observed_at,"
+        "ROW_NUMBER() OVER (PARTITION BY process ORDER BY observed_at DESC, instance_id DESC) AS rank "
+        "FROM process_heartbeats"
+        ") latest WHERE rank=1 ORDER BY process,instance_id"
+    ).fetchall()
+
+
 class ProjectLifecycleControl(BaseModel):
     lifecycle: str = Field(min_length=1, max_length=32)
     expected_version: int = Field(ge=1)
@@ -109,6 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.library = LibraryReader(settings)
     app.state.review_resolution_lock = threading.Lock()
     app.state.last_api_heartbeat = 0.0
+    app.state.api_instance_id = f"api-{uuid.uuid4().hex}"
 
     def serialized_store_write(function):
         @wraps(function)
@@ -334,7 +346,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         heartbeat_now = time.monotonic()
         if heartbeat_now - app.state.last_api_heartbeat >= 10:
             try:
-                app.state.store.heartbeat("api", "api-1", details={"version": app.version})
+                app.state.store.heartbeat("api", app.state.api_instance_id, details={"version": app.version})
                 app.state.last_api_heartbeat = heartbeat_now
             except Exception:
                 app.state.store.db.rollback()
@@ -854,9 +866,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
 
     def runtime_health_data(project: str | None = None) -> dict:
-        rows = app.state.store.db.execute(
-            "SELECT process,instance_id,state,details,observed_at FROM process_heartbeats ORDER BY process,instance_id"
-        ).fetchall()
+        rows = _latest_process_heartbeats(app.state.store)
         expected = {"api", "scheduler", "worker", "notification", "reconciliation"}
         heartbeats = []
         observed_processes = set()
@@ -2693,9 +2703,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         service = app.state.store.db.execute(
             "SELECT state,version,updated_at FROM agent_service_state WHERE singleton=1"
         ).fetchone()
-        heartbeat = app.state.store.db.execute(
-            "SELECT observed_at FROM process_heartbeats WHERE process='worker' ORDER BY observed_at DESC LIMIT 1"
-        ).fetchone()
+        heartbeat = next(
+            (row for row in _latest_process_heartbeats(app.state.store) if row["process"] == "worker"),
+            None,
+        )
         health = heartbeat_health(heartbeat["observed_at"] if heartbeat else None)
         operator_state = service["state"]
         counts = app.state.store.db.execute(

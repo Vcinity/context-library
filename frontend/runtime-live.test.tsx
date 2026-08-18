@@ -23,6 +23,16 @@ test("runtime health polls at fifteen seconds and reports stale data", async () 
   expect(fetch).toHaveBeenCalledTimes(2);
 });
 
+test("runtime health renders the selected process heartbeat", () => {
+  render(<RuntimeHealth project="demo" initial={{
+    ...health,
+    heartbeats: [{ process: "worker", instance_id: "worker-current", state: "healthy", observed_at: "2026-08-17T12:00:00Z" }],
+  }} />);
+  expect(screen.getByText("worker")).toBeVisible();
+  expect(screen.getByText(/worker-current/)).toBeVisible();
+  expect(screen.getByText(/Last observed 2026-08-17T12:00:00Z/)).toBeVisible();
+});
+
 test("library detail checks its digest when focus returns", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
     ok: true,

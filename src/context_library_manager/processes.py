@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+import uuid
 
 from .agent_service import complete_drain
 from .config import Settings
@@ -107,7 +108,7 @@ def _heartbeat_loop(process: str, settings: Settings, stop: threading.Event, int
         "notifications": "notification",
         "reconcile": "reconciliation",
     }[process]
-    instance = f"{process_name}-{os.getpid()}"
+    instance = f"{process_name}-{uuid.uuid4().hex}"
     store = Store(settings.storage_target)
     try:
         while not stop.is_set():
