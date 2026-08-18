@@ -7,6 +7,10 @@
   evidence.
 - Document the required post-install Plugin runtime configuration step.
 
+## 0.4.4 - 2026-08-18
+
+- Make Manager health aggregation restart-safe and instance-aware.
+
 ## 0.4.3 - 2026-08-17
 
 - Make packaged MCP launch independent of the caller's working directory.

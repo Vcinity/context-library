@@ -1,3 +1,3 @@
 """One product version for every Context Library component."""
 
-VERSION = "0.4.3"
+VERSION = "0.4.4"
