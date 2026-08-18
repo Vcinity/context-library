@@ -49,10 +49,12 @@ Plugin operations.
 ## Context policy
 
 A consumer may explicitly set context to `required`, `optional`, or
-`disabled`. An absent policy is `undetermined` and fail-open. Missing required
-context produces an advisory notice; optional and undetermined context do not
-interfere; disabled context is silent. Canonical additions and corrections go
-through the Manager.
+`disabled`. An absent policy is `undetermined` and fail-open. Once the
+installed Plugin runtime is healthy, missing required context produces an
+advisory notice; optional and undetermined context do not interfere; disabled
+context is silent. An installed runtime failure instead produces a structured
+stop result so the agent cannot mistake a broken Plugin for a working one.
+Canonical additions and corrections go through the Manager.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), the
 [Context Library Roadmap](https://github.com/orgs/Vcinity/projects/1),

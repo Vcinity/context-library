@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Add the deterministic offline full-system acceptance harness used by `make e2e`.
+- Make installed Plugin runtime failures stop session-start work with a
+  structured condition and explicit fix, disable, or uninstall recovery.
 
 - Add an evidence-backed roadmap for multi-project management, shared-context
   inheritance, review-authorized publication, and production autonomy

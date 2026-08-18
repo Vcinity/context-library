@@ -805,28 +805,59 @@ available to the user and agent. The notice MUST include:
 
 The Plugin MUST NOT itself perform that update.
 
-Missing required context does not create Plugin write authority. Unless a
-higher-level repository or organizational instruction explicitly makes
-missing context a stop condition, the notice is advisory and the user or agent
-may proceed.
+Missing required context does not create Plugin write authority. The advisory
+rule applies after the installed Plugin runtime has successfully completed its
+own configuration and library-root preflight. A runtime failure in an
+installed, trusted Plugin is a separate installation-state failure, not merely
+missing organizational context: the session-start hook MUST stop the agent
+before further task work and expose the machine-readable runtime condition.
+
+The blocking runtime conditions are `missing_config`, `malformed_config`,
+`unreadable_config`, `missing_root`, and `unreadable_root`. The stop result MUST
+identify the condition and provide safe recovery choices to fix the
+configuration or access, explicitly disable the context policy, or uninstall
+the Plugin. It MUST NOT expose configuration contents, credentials, canonical
+text, or unredacted filesystem errors. The hook MUST use a non-success exit
+status and a structured result with a stable blocking disposition so a host
+cannot mistake the Plugin for a healthy, silently inactive integration.
 
 For optional or undetermined context, unavailability MUST NOT block, redirect,
 or inject generic instructions into the agent's task. The skill MAY permit the
 agent to disclose that it proceeded without organizational context when that
 fact is materially relevant and to give the user an opportunity to supply it.
 
-Disabled context MUST remain silent.
+Disabled context MUST remain silent when the explicit disabled policy can be
+resolved successfully. If the installed Plugin cannot complete runtime
+preflight, it MUST stop before treating context as disabled; otherwise a
+malformed or missing configuration could conceal a broken installation.
+
+An absent Plugin has no hook boundary and therefore cannot enforce this
+stop. Hosts and agents MUST continue to apply the normal policy for an absent
+Plugin, while the Plugin's skill and read-only MCP status boundary provide
+diagnostics when those surfaces are available.
 
 ### 12.6 Session-start behavior
 
 The session-start hook MUST:
 
 1. determine the activation root safely;
-1. resolve an explicit context-requirement signal;
+1. perform deployment-local runtime preflight before policy resolution or
+   projection;
+1. stop with the stable structured blocking result for an installed runtime
+   condition in the blocking set above;
+1. resolve an explicit context-requirement signal after healthy preflight;
 1. check availability without canonical writes;
 1. synchronize a configured projection only when allowed and safe;
 1. notify on unavailable required context; and
 1. otherwise fail open without adding generic guidance.
+
+The blocking result MUST be visible to both the host and the agent: the hook
+MUST emit a concise human-readable recovery message plus machine-readable
+fields for its schema version, `status=blocked`, `disposition=stop`, and
+`runtime_condition`, and MUST exit non-zero. A blocked hook MUST not write a
+projection or modify canonical data. A healthy optional or undetermined policy
+continues to be non-interfering, and a healthy required policy retains the
+missing-context notice behavior above.
 
 The hook MUST NOT auto-select a project merely because it is the only available
 pack.
@@ -844,7 +875,10 @@ The skill MUST teach agents to:
 - preserve supersession and provenance;
 - recognize when context is required, optional, disabled, or undetermined;
 - never create or update canonical context through the Plugin;
-- notify the user when required context is unavailable;
+- obey a session-start blocking result and stop rather than proceeding when an
+  installed Plugin runtime is inaccessible;
+- notify the user when required context is unavailable after healthy runtime
+  preflight;
 - continue without interference when context is not required;
 - disclose materially relevant missing context when appropriate;
 - invite the user to provide missing context; and
@@ -865,7 +899,10 @@ The skill MUST teach agents to:
 ### 13.2 Normal individual-agent workflow
 
 1. Read Plugin-provided organizational context when available.
-1. If required context is unavailable, notify the user.
+1. If the installed Plugin reports a blocking runtime failure, stop and give
+   the user the documented fix, disable, or uninstall recovery choices.
+1. If required context is unavailable after healthy runtime preflight, notify
+   the user.
 1. Gather evidence with authorized connectors or user-provided material.
 1. Submit observations or proposals through the Manager.
 1. Never publish or edit canonical files directly.
