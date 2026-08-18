@@ -34,8 +34,9 @@ instance and a fresh post-restart instance.
 
 ## Proposed contract and design
 
-Change process startup heartbeat identity and `runtime_health_data()` to
-aggregate service health per producer role
+Change process startup heartbeat identity and shared heartbeat selection logic
+so `runtime_health_data()` and `agent_service_summary()` aggregate service
+health per producer role
 across the documented multi-replica topology. For each process, select the
 freshest currently fresh instance (healthy or degraded) as the active service
 health representative. If no instance is fresh, select the newest observed
@@ -55,10 +56,11 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 
 ## Affected files/components
 
-- `src/context_library_manager/api.py`
+- `src/context_library_manager/api.py` (`runtime_health_data()` and
+  `agent_service_summary()`)
 - `src/context_library_manager/processes.py`
 - `tests/manager/test_runtime_observability.py`
-- `docs/DEPLOYMENT.md` if the operational health explanation needs updating
+- `docs/DEPLOYMENT.md`
 
 ## Test strategy and commands
 
@@ -71,6 +73,8 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 - Assert the public `/api/v1/health` endpoint still redacts instance IDs to
   `observed`/`not-observed` while the project-scoped endpoint exposes the
   diagnostic identity to authorized operators.
+- Assert the agent-service summary uses the same selected worker health as the
+  runtime health endpoints, preventing duplicate heartbeat-selection logic.
 - Assert a genuinely stale newest instance remains non-healthy.
 - Assert existing missing-process and public-redaction behavior remains.
 - Run focused Manager tests, then `make test`, `make check`, `make e2e`,
@@ -86,6 +90,9 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
 - Instance IDs must include a per-process unique value rather than only a role
   and reusable PID; otherwise concurrent containers can overwrite one
   another's durable row and invalidate the multi-replica contract.
+- Document the unique instance identity and project-scoped diagnostic field in
+  `docs/DEPLOYMENT.md`; this is required operator guidance, not a conditional
+  follow-up.
 - Restart-safe selection does not prune historical `process_heartbeats` rows.
   This issue explicitly accepts that existing retention behavior as a
   separately tracked follow-up; the implementation must not delete history as
