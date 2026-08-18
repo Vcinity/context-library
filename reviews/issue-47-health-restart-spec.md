@@ -25,8 +25,8 @@ instance and a fresh post-restart instance.
 
 - Issue #47: active producer instances determine aggregate status after
   restart; stale replaced instances must not force `offline`.
-- SPEC §15: diagnostics must explain runtime health without becoming canonical
-  audit records.
+- SPEC §15 and §20: operational diagnostics and documentation must explain
+  runtime health without becoming canonical audit records.
 - SPEC §16: deterministic offline tests use local synthetic stores and stable
   HTTP boundaries.
 - AGENTS.md: Manager changes require focused black-box tests and the root
@@ -37,10 +37,10 @@ instance and a fresh post-restart instance.
 Change process startup heartbeat identity and shared heartbeat selection logic
 so `runtime_health_data()` and `agent_service_summary()` aggregate service
 health per producer role
-across the documented multi-replica topology. For each process, select the
-freshest currently fresh instance (healthy or degraded) as the active service
-health representative. If no instance is fresh, select the newest observed
-row so the role remains visibly degraded/offline. A fresh post-restart
+across the documented multi-replica topology. In Python, classify each row
+with the existing `heartbeat_health()` helper, then select the newest fresh
+row (healthy or degraded) for each process; if no row is fresh, select the
+newest observed row so the role remains visibly degraded/offline. A fresh post-restart
 instance therefore supersedes stale historical rows, while another healthy
 replica can continue to represent an otherwise available role. Each process
 instance must generate a unique identifier that cannot collide across hosts,
@@ -51,8 +51,10 @@ still produce the existing `not-observed`
 offline entry. Telemetry completeness remains responsible for detecting
 missing producer instances; this endpoint reports role-level service health.
 
-Use a portable SQL window query supported by the repository's SQLite and
-PostgreSQL targets. Preserve read-only behavior and existing public redaction.
+Use one Python selection helper shared by both Manager consumers, applying the
+existing `heartbeat_health()` thresholds after loading the rows; do not add a
+second SQL freshness threshold. Preserve read-only behavior and existing
+public redaction.
 
 ## Affected files/components
 
@@ -60,6 +62,8 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
   `agent_service_summary()`)
 - `src/context_library_manager/processes.py`
 - `tests/manager/test_runtime_observability.py`
+- `frontend/runtime-live.tsx`
+- `frontend/runtime-live.test.tsx`
 - `docs/DEPLOYMENT.md`
 
 ## Test strategy and commands
@@ -75,6 +79,8 @@ PostgreSQL targets. Preserve read-only behavior and existing public redaction.
   diagnostic identity to authorized operators.
 - Assert the agent-service summary uses the same selected worker health as the
   runtime health endpoints, preventing duplicate heartbeat-selection logic.
+- Assert the runtime health UI renders one selected row per process after a
+  restart rather than accumulated historical instance rows.
 - Assert a genuinely stale newest instance remains non-healthy.
 - Assert existing missing-process and public-redaction behavior remains.
 - Run focused Manager tests, then `make test`, `make check`, `make e2e`,
