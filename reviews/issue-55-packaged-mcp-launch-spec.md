@@ -31,10 +31,15 @@ process restart.
 ## Proposed contract and design
 
 `.mcp.json` will invoke `python3 ${PLUGIN_ROOT}/mcp/context_library_server.py`
-and omit the relative `cwd`. `${PLUGIN_ROOT}` is the same host-provided
-Plugin-root expansion currently used by `hooks/hooks.json`; it relocates with
-the installed Plugin and does not expose deployment paths. The packaging
-validator will require this exact launch form.
+and omit the relative `cwd`. The design assumes that the host expands
+`${PLUGIN_ROOT}` in MCP command arguments, and that this is the correct
+variable name for `.mcp.json`, not merely for the existing hook configuration.
+The repository currently has no host-contract fixture proving that assumption;
+the implementation must preserve the assumption as an explicit deployment
+verification item and must not describe the offline test as proof of host
+expansion. `${PLUGIN_ROOT}` relocates with the installed Plugin and does not
+expose deployment paths. The packaging validator will require this exact
+launch form.
 
 The test will build a deterministic archive, extract it into a temporary
 release destination, substitute the staged destination for `${PLUGIN_ROOT}`
@@ -49,7 +54,7 @@ classified as a canonical-library configuration error.
 - `plugins/context-library/.mcp.json`
 - `scripts/plugin/validate_plugin_repo.py`
 - `tests/plugin/test_plugin_packaging.py` or a focused packaged-launch test
-- `docs/PLUGIN_DEPLOYMENT.md` if the launch contract needs operator guidance
+- `docs/PLUGIN_DEPLOYMENT.md`
 
 ## Test strategy and commands
 
@@ -57,15 +62,21 @@ classified as a canonical-library configuration error.
   relative `cwd`.
 - Extract the built archive into a temporary destination and launch from an
   unrelated cwd, twice, using MCP initialization and `tools/list`.
+- Document the `${PLUGIN_ROOT}` launch contract and the required installed-host
+  smoke verification in `docs/PLUGIN_DEPLOYMENT.md`.
+- Obtain host-contract evidence from upstream documentation or an authorized
+  live smoke test; the archive test alone is not sufficient evidence that the
+  host expands the variable.
 - Run focused Plugin tests, `make plugin-check`, and `git diff --check`.
 - Run the applicable root checks after integration.
 
 ## Risks and mitigations
 
-- If the host does not expand `${PLUGIN_ROOT}` in MCP commands, the change
-  would regress installation. Existing Plugin hook configuration provides the
-  repository's host-contract precedent; the validator and packaged launch
-  test keep the contract explicit.
+- If the host does not expand `${PLUGIN_ROOT}` in MCP commands, or uses a
+  different variable name, the change would regress installation. Existing
+  Plugin hook configuration is only a repository precedent, not proof of MCP
+  argument expansion. The validator, packaged launch test, deployment note,
+  and installed-host smoke verification keep the contract explicit.
 - A test that launches source files instead of the archive would miss the
   relocation defect; the test must extract and execute the archive.
 - The test must use synthetic temporary data only and never point runtime
@@ -73,5 +84,7 @@ classified as a canonical-library configuration error.
 
 ## Unresolved questions
 
-None for the bounded repository contract. Installed-host verification remains
-deployment evidence and is not substituted by this offline test.
+- Does the installed host expand `${PLUGIN_ROOT}` in `.mcp.json` command
+  arguments, and is `${PLUGIN_ROOT}` the supported variable name for this
+  manifest? Resolve with upstream host documentation or an authorized live
+  smoke test before claiming the issue fully closed.
