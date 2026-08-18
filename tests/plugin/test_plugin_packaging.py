@@ -98,7 +98,7 @@ def test_packaged_mcp_launch_is_independent_of_caller_working_directory(tmp_path
     unrelated_cwd = tmp_path / "consumer-workspace"
     unrelated_cwd.mkdir()
     destinations = (
-        tmp_path / "release-v0.4.3" / "marketplace",
+        tmp_path / "release-v0.4.4" / "marketplace",
         tmp_path / "consumer-cache" / "nested" / "plugin-install",
     )
     for destination in destinations:
