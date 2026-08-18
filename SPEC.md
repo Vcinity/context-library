@@ -1018,7 +1018,9 @@ The suite MUST prove:
 1. Plugin projection includes only applicable current explicit constraints.
 1. Required missing context produces notice and no canonical write.
 1. Optional and undetermined missing context do not interfere.
-1. Disabled context remains silent.
+1. Disabled context remains silent once installed runtime preflight is healthy;
+   an inaccessible installed runtime remains a blocking failure even when a
+   disabled policy is configured.
 1. Legacy flat-pack data resolves as one logical pack.
 1. Generated Plugin shared code matches its authoritative Core source.
 

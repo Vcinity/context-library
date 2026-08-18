@@ -56,6 +56,9 @@ optional/required/undetermined context policy.
 
 - Exercise the hook subprocess for all five blocking runtime conditions and
   assert status `2`, structured output, recovery choices, and no writes.
+- Include a well-formed `context_requirement: disabled` configuration whose
+  library root is missing or unreadable, proving preflight runs before the
+  disabled short-circuit and still returns a blocking runtime condition.
 - Assert healthy disabled, optional, undetermined, and required paths retain
   their existing behavior.
 - Assert recovery after configuration/root remediation and preserve the
