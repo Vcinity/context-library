@@ -7,6 +7,12 @@
   evidence.
 - Document the required post-install Plugin runtime configuration step.
 
+## 0.4.3 - 2026-08-17
+
+- Make packaged MCP launch independent of the caller's working directory.
+- Add deterministic first-use diagnostics and multi-term search behavior to
+  the Plugin release.
+
 ## 0.4.2 - 2026-08-17
 
 - Rename the marketplace display name to Vcinity Engineering.

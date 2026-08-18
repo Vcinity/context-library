@@ -1,6 +1,6 @@
 # Generated from context_library_core.canonical; do not edit.
-# source-version: 0.4.2
-# source-sha256: 1c41e84e8c9b76b5fd06b146bbed5c4b05bf8fc44cf4f5e140d3d4c50dff5c60
+# source-version: 0.4.3
+# source-sha256: 68d807e46d604ecee926a73d3a312e2d53458c482a596b0b46fb0d1a9d3daa2e
 from __future__ import annotations
 
 import dataclasses
@@ -384,7 +384,7 @@ def lexical_tokens(text: str) -> tuple[str, ...]:
 
 
 # Generated read-only contract metadata used by the self-contained Plugin.
-PRODUCT_VERSION = '0.4.2'
+PRODUCT_VERSION = '0.4.3'
 CONTEXT_POLICY_JSON_SCHEMA = {'additionalProperties': False,
  'properties': {'affected_layers': {'additionalProperties': {'type': 'string'},
                                     'title': 'Affected Layers',

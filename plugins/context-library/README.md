@@ -50,7 +50,7 @@ compatible read-only deployment without changing the source checkout:
 
 ```bash
 python3 scripts/install_plugin.py \
-  --destination /opt/context-library-plugin-v0.4.2 \
+  --destination /opt/context-library-plugin-v0.4.3 \
   --library-root /absolute/path/to/canonical-library \
   --marketplace-name organization-marketplace
 ```
@@ -85,7 +85,7 @@ administrator-owned destination. The administrator must configure the shared
 Plugin first, then users can register the readable shared root:
 
 ```bash
-codex plugin marketplace add /srv/shared/context-library-plugin-v0.4.2
+codex plugin marketplace add /srv/shared/context-library-plugin-v0.4.3
 codex plugin add context-library@context-library
 ```
 
