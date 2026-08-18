@@ -37,10 +37,9 @@ instance and a fresh post-restart instance.
 Change process startup heartbeat identity and shared heartbeat selection logic
 so `runtime_health_data()` and `agent_service_summary()` aggregate service
 health per producer role
-across the documented multi-replica topology. In Python, classify each row
-with the existing `heartbeat_health()` helper, then select the newest fresh
-row (healthy or degraded) for each process; if no row is fresh, select the
-newest observed row so the role remains visibly degraded/offline. A fresh post-restart
+across the documented multi-replica topology. Select exactly one newest row by
+`observed_at` per process using a portable bounded SQL window query, then apply
+the existing `heartbeat_health()` helper once to that row. A fresh post-restart
 instance therefore supersedes stale historical rows, while another healthy
 replica can continue to represent an otherwise available role. Each process
 instance must generate a unique identifier that cannot collide across hosts,
@@ -51,10 +50,10 @@ still produce the existing `not-observed`
 offline entry. Telemetry completeness remains responsible for detecting
 missing producer instances; this endpoint reports role-level service health.
 
-Use one Python selection helper shared by both Manager consumers, applying the
-existing `heartbeat_health()` thresholds after loading the rows; do not add a
-second SQL freshness threshold. Preserve read-only behavior and existing
-public redaction.
+Use one SQL selection helper shared by both Manager consumers, applying the
+existing `heartbeat_health()` thresholds only after the bounded per-process
+selection; do not add a second SQL freshness threshold. Preserve read-only
+behavior and existing public redaction.
 
 ## Affected files/components
 
@@ -71,9 +70,9 @@ public redaction.
 - Seed an offline old instance and a fresh healthy replacement for the same
   process, call the project-scoped health endpoint, and assert aggregate
   `healthy` plus the replacement `instance_id`.
-- Seed two instances for one process, with one fresh and one stale, and assert
-  role-level health uses the fresh instance while preserving the selected
-  identity in the response.
+- Seed two instances for one process and assert role-level health uses the
+  newest observed instance while preserving the selected identity in the
+  response.
 - Assert the public `/api/v1/health` endpoint still redacts instance IDs to
   `observed`/`not-observed` while the project-scoped endpoint exposes the
   diagnostic identity to authorized operators.
@@ -81,6 +80,8 @@ public redaction.
   runtime health endpoints, preventing duplicate heartbeat-selection logic.
 - Assert the runtime health UI renders one selected row per process after a
   restart rather than accumulated historical instance rows.
+- Assert two heartbeat loops/process instances with the same role and reused
+  PID input still generate distinct instance IDs and durable rows.
 - Assert a genuinely stale newest instance remains non-healthy.
 - Assert existing missing-process and public-redaction behavior remains.
 - Run focused Manager tests, then `make test`, `make check`, `make e2e`,
@@ -105,7 +106,7 @@ public redaction.
   part of a health read, and a future retention change must preserve the
   diagnostic evidence contract.
 - SQL portability must be checked against the supported SQLite and PostgreSQL
-  dialects; use a window function rather than engine-specific syntax.
+  dialects; use a portable window function rather than engine-specific syntax.
 
 ## Unresolved questions
 
