@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the deterministic offline full-system acceptance harness used by `make e2e`.
+
 - Add an evidence-backed roadmap for multi-project management, shared-context
   inheritance, review-authorized publication, and production autonomy
   evidence.

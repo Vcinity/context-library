@@ -69,6 +69,7 @@ retrieval-benchmark:
 	PYTHONPATH=src poetry run python scripts/run_retrieval_benchmark.py --output /tmp/context-library-retrieval-benchmark
 
 e2e: ui-build
+	poetry run python scripts/full_system_e2e.py
 	npx playwright test
 
 smoke:
