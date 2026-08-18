@@ -38,8 +38,11 @@ def test_all_inaccessible_runtime_conditions_stop_before_policy(monkeypatch, tmp
     root = tmp_path / "activation"
     root.mkdir()
     monkeypatch.setenv("CONTEXT_LIBRARY_PROJECT_ROOT", str(root))
+    monkeypatch.delenv("CONTEXT_LIBRARY_ROOT", raising=False)
+    monkeypatch.delenv("CONTEXT_LIBRARY_CONTEXT_REQUIREMENT", raising=False)
     config_path = tmp_path / "runtime-config.json"
     monkeypatch.setattr(session_start.projection.runtime_config, "CONFIG_PATH", config_path)
+    load_runtime_config = session_start.projection.runtime_config.load_runtime_config
 
     assert_blocked(capsys, "missing_config")
 
@@ -51,7 +54,9 @@ def test_all_inaccessible_runtime_conditions_stop_before_policy(monkeypatch, tmp
 
     monkeypatch.setattr(session_start.projection.runtime_config, "load_runtime_config", unreadable)
     assert_blocked(capsys, "unreadable_config")
-    monkeypatch.undo()
+    monkeypatch.setattr(session_start.projection.runtime_config, "load_runtime_config", load_runtime_config)
+    monkeypatch.delenv("CONTEXT_LIBRARY_ROOT", raising=False)
+    monkeypatch.delenv("CONTEXT_LIBRARY_CONTEXT_REQUIREMENT", raising=False)
     monkeypatch.setenv("CONTEXT_LIBRARY_PROJECT_ROOT", str(root))
     monkeypatch.setattr(session_start.projection.runtime_config, "CONFIG_PATH", config_path)
 
