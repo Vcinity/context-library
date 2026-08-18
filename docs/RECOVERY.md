@@ -1,5 +1,15 @@
 # Recovery procedures
 
+## Installed Plugin runtime failure
+
+If the trusted session-start hook exits with status `2`, stop agent work for
+that turn. Read its machine-readable `runtime_condition` and choose one of the
+reported recovery paths: repair the deployment-local runtime
+configuration/library access, explicitly disable the context policy, or
+uninstall the Plugin. Start a new session after repairing or reinstalling it.
+The hook does not modify canonical data while blocked. An absent Plugin has no
+hook boundary, so use the available MCP status or skill diagnostics instead.
+
 ## Publication failure
 
 Publication errors preserve the last known-good register and report updated,

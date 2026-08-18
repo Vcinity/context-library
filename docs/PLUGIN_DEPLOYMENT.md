@@ -153,6 +153,14 @@ same classification when the runtime is not usable.
 | `missing_root`        | The configured library root path does not exist.                    | Verify the mount/path, then reconfigure if it moved.                  |
 | `unreadable_root`     | The configured library root exists but is not readable.              | Grant the Plugin process read/traverse access to the root.            |
 
+The trusted session-start hook performs this preflight before resolving
+context policy. For any condition other than `healthy`, it emits a structured
+blocking result (`status=blocked`, `disposition=stop`, and the condition) and
+exits with status `2`. Fix the configuration/access, explicitly disable the
+context policy, or uninstall the Plugin before continuing. This stop applies
+even when a broken configuration declares `disabled`; a successfully
+preflighted disabled policy remains silent.
+
 `CONTEXT_LIBRARY_ROOT` always takes precedence over the bundled
 `runtime-config.json`, including when the bundled file is malformed: an
 active environment override is classified on its own, never blocked by a

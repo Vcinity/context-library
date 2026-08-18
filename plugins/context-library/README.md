@@ -102,11 +102,15 @@ hook definition is reviewed and trusted. After installing through `/plugin`,
 open `/hooks`, review and trust the Context Library hook, then start a new
 thread. The skill and MCP server remain available while hook trust is pending.
 
-The trusted session-start hook acts only on explicit context policy and project
-binding. Required unavailable context produces an advisory notice. Optional
-unavailable context fails open without task interference. Disabled and
-undetermined context add no guidance. Git is used only to find an activation
-root. Automatic projection is limited to current explicit universal
+The trusted session-start hook first checks its installed runtime. If the
+configuration or configured library root is inaccessible, it emits a
+structured `status=blocked`, `disposition=stop` result and exits with status
+`2`; fix the configuration/access, explicitly disable the policy, or uninstall
+the Plugin before continuing. This applies even when a broken configuration
+declares `disabled`. Required unavailable context produces an advisory notice
+only after healthy runtime preflight. Optional unavailable context fails open
+without task interference. Healthy disabled and undetermined context add no
+guidance. Git is used only to find an activation root. Automatic projection is limited to current explicit universal
 constraints; scoped, conditional, superseded, conflicted, inferred, and
 assumed guidance requires an explicit task-context request or on-demand
 operation. The hook never mutates companion-library decision content.

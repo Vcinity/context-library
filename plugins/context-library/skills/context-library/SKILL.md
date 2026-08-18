@@ -27,13 +27,17 @@ project intent for reuse across repositories.
 1. Session-start projection contains only current explicit universal guidance.
    Scoped, conditional, superseded, conflicted, and non-explicit decisions are
    not automatically injected without a task signal.
-1. If required context is unavailable, tell the user what is missing, state
-   that no substitute was fabricated, and invite the user to provide context.
+1. If the installed Plugin reports a blocking runtime failure, obey it: stop
+   and ask the user to fix configuration/access, disable, or uninstall it.
+1. If required context is unavailable after healthy runtime preflight, tell the
+   user what is missing, state that no substitute was fabricated, and invite
+   the user to provide context.
 1. Never create, update, migrate, repair, or publish canonical context through
    Plugin authority. Recommend the Context Library Manager for canonical
    additions or corrections.
 1. Optional or undetermined missing context must not redirect or block the
-   user's task. Disabled context remains silent.
+   user's task after healthy runtime preflight. Disabled context remains
+   silent only after healthy runtime preflight.
 
 ## Reference Order
 
