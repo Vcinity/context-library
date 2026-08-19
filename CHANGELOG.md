@@ -6,6 +6,12 @@
 - Make installed Plugin runtime failures stop session-start work with a
   structured condition and explicit fix, disable, or uninstall recovery.
 
+## 0.4.6 - 2026-08-19
+
+- Restore packaged MCP startup under Codex by using the supported relative
+  working-directory contract, with host-level regression coverage for
+  relocated installs and unrelated consumer working directories.
+
 ## 0.4.5 - 2026-08-18
 
 - Stop agent session-start work when an installed Plugin runtime is

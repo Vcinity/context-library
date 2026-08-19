@@ -17,7 +17,7 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_SOURCE = ROOT / "plugins/context-library"
 SERVER_RELATIVE = Path("mcp/context_library_server.py")
-VERSION = "0.4.5"
+VERSION = "0.4.6"
 EXPECTED_TOOLS = {
     "get_library_status",
     "list_project_packs",
