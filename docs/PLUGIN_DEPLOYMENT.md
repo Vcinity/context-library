@@ -22,14 +22,15 @@ The sparse checkout does not need Python dependencies, Poetry, Node.js, the
 Manager, the Maintainer service, or the frontend. The bundled MCP server uses
 the host's `python3` and the read-only Plugin runtime.
 
-The MCP manifest launches the server through the host-provided
-`${PLUGIN_ROOT}` expansion. It does not depend on the caller's working
-directory, so a staged release and a consumer Plugin cache can be relocated
-without changing the command. After installation or cache refresh, start a
-new Codex thread and verify that the Plugin MCP initializes and lists its
-tools. If the host reports a launch failure, inspect the resolved Plugin path
-and reinstall the staged marketplace; do not interpret a process-spawn error
-as a canonical-library runtime condition.
+The MCP manifest uses Codex's supported plugin-relative launch contract:
+`cwd: "."` is resolved by Codex against the installed Plugin root, and the
+server argument remains `./mcp/context_library_server.py`. It does not depend
+on the caller's working directory or `${PLUGIN_ROOT}` interpolation. After
+installation or cache refresh, start a new Codex thread and verify that the
+Plugin MCP initializes and lists its tools. If the host reports a launch
+failure, inspect the resolved Plugin path and reinstall the staged
+marketplace; do not interpret a process-spawn error as a canonical-library
+runtime condition.
 
 Keep the deployment checkout separate from the canonical library and from any
 consumer workspace. The projection safety checks reject overlapping roots.
