@@ -73,6 +73,12 @@ repository may retain a separate direct protocol smoke test for diagnosis.
 The release/plugin validation target invokes this host regression before a
 package can be treated as releasable.
 
+Every Codex marketplace registration, plugin installation, and host launch
+must set `CODEX_HOME` (or the host's equivalent isolated config root) to a
+per-test temporary directory, assert that only that directory changes, and
+remove it during bounded teardown. The regression must never mutate the
+invoking user's persistent Codex configuration or plugin cache.
+
 ## Affected components
 
 - `plugins/context-library/.mcp.json`: supported source launch contract.
@@ -142,7 +148,9 @@ mdl AGENTS.md ARCHITECTURE.md CHANGELOG.md MIGRATION.md README.md SPEC.md docs/D
 - Failure diagnostics can be flaky if processes are not drained; use bounded
   timeouts, captured stderr, and deterministic fake process states.
 - Staging must not alter the source tree or installed cache; use temporary
-  extraction roots and explicit cleanup.
+  extraction roots and explicit cleanup. Codex host state must likewise be
+  isolated with a per-test temporary `CODEX_HOME` (or equivalent), including
+  interrupted-run-safe cleanup.
 - Public docs must not contain private deployment paths or credentials.
 
 ## Unresolved questions
@@ -172,3 +180,10 @@ records issue #70's explicit local Codex integration authorization, separates
 that check from the offline default, removes the stale lint path, and narrows
 the applicable authority citations. Because test strategy changed materially,
 the Project Spec Gate remains `Drafting` and a fresh review is required.
+
+Fresh corrected review: `PASS with findings`, model `sonnet`, effort `medium`,
+one substantive attempt after the correction. Claude found no Critical or
+High findings and one Medium finding requiring explicit `CODEX_HOME` isolation
+for marketplace registration, installation, and launch. This revision resolves
+that finding by requiring a per-test temporary host state, change assertion,
+and bounded teardown; the scope and host contract are unchanged.
