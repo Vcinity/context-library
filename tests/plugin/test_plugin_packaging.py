@@ -92,8 +92,8 @@ def test_packaged_mcp_launch_is_independent_of_caller_working_directory(tmp_path
     manifest = json.loads((ROOT / "plugins/context-library/.mcp.json").read_text(encoding="utf-8"))
     server = manifest["mcpServers"]["context_library"]
     assert server["command"] == "python3"
-    assert server["args"] == ["${PLUGIN_ROOT}/mcp/context_library_server.py"]
-    assert "cwd" not in server
+    assert server["args"] == ["./mcp/context_library_server.py"]
+    assert server["cwd"] == "."
 
     unrelated_cwd = tmp_path / "consumer-workspace"
     unrelated_cwd.mkdir()
@@ -111,11 +111,11 @@ def test_packaged_mcp_launch_is_independent_of_caller_working_directory(tmp_path
 
         for _ in range(2):
             proc = subprocess.Popen(
-                [server["command"], str(server["args"][0].replace("${PLUGIN_ROOT}", str(plugin_root)))],
+                [server["command"], *server["args"]],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=unrelated_cwd,
+                cwd=plugin_root,
             )
             try:
                 initialized = smoke.request(

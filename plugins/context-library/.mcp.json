@@ -2,7 +2,8 @@
   "mcpServers": {
     "context_library": {
       "command": "python3",
-      "args": ["${PLUGIN_ROOT}/mcp/context_library_server.py"]
+      "args": ["./mcp/context_library_server.py"],
+      "cwd": "."
     }
   }
 }
