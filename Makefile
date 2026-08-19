@@ -49,6 +49,7 @@ plugin-check:
 	poetry run python scripts/plugin/smoke_mcp_server.py
 	poetry run python scripts/plugin/test_projection.py
 	poetry run python scripts/plugin/test_activation_hook.py
+	poetry run python scripts/plugin/test_codex_plugin_host.py
 	poetry run python scripts/generate_plugin_runtime.py --check
 
 ui-test:
@@ -75,7 +76,7 @@ e2e: ui-build
 smoke:
 	poetry run python scripts/smoke_context_library.py
 
-package: contracts-check plugin-build ui-build
+package: contracts-check plugin-check plugin-build ui-build
 	poetry build --clean
 	poetry run python scripts/smoke_package.py
 
