@@ -30,9 +30,11 @@ for the host boundary.
 
 - `AGENTS.md` requires the Plugin to remain independently deployable,
   canonical-read-only, public-safe, and validated at stable boundaries.
-- `SPEC.md` Sections 6, 7, 12.1, 12.2, 12.6, 12.7, and 17 require an
-  independently packaged read-only MCP, deterministic packaging, explicit
-  host trust behavior, and deterministic root validation.
+- `SPEC.md` Sections 6, 7, 12.1, 12.2, and 17 require an independently
+  packaged read-only MCP, deterministic packaging, and deterministic root
+  validation. The session-start hook and skill contracts in Sections 12.6 and
+  12.7 are not changed by this issue and are therefore intentionally out of
+  scope.
 - Issue #70 requires a Codex-supported relocatable launch mechanism, unchanged
   packaged command/arguments in the regression, two relocation paths,
   unrelated cwd, successful `initialize` and `tools/list`, and explicit
@@ -101,15 +103,20 @@ asserts no canonical writes.
 - Focused manifest/packaging tests assert the exact command/args loaded from
   each installed artifact and forbid token substitution.
 - Codex-host regression uses the locally available `codex` executable and a
-  controlled plugin staging/configuration boundary; it must fail clearly when
-  Codex is absent or the host contract changes.
+  controlled plugin staging/configuration boundary. Issue #70 explicitly
+  authorizes this local Codex integration environment as the required host
+  boundary; it is separate from the default offline, deterministic unit and
+  fake-host checks. It must fail clearly when Codex is absent or the host
+  contract changes, rather than silently skipping.
 - Protocol assertions require successful `initialize` and `tools/list`, and
   verify the expected read-only tool names.
 - Negative tests use realistic local fake launchers/processes and assert exit,
   stderr/diagnostic classification, broken pipe, and handshake failures.
 - Existing direct MCP read-only, packaging, plugin-check, smoke, package, and
-  full e2e checks remain required. Tests remain deterministic/offline apart
-  from the local Codex executable and do not mutate installed caches.
+  full e2e checks remain required. Default committed tests remain deterministic
+  and offline with realistic local fakes. The explicitly authorized local
+  Codex-host integration check is the sole host-dependent exception and does
+  not mutate installed caches.
 
 ## Validation commands
 
@@ -123,7 +130,7 @@ make package
 make test
 make check
 git diff --check
-mdl AGENTS.md ARCHITECTURE.md CHANGELOG.md IMPLEMENTATION_PROMPT.md MIGRATION.md README.md SPEC.md docs/DEPLOYMENT.md docs/PLUGIN_DEPLOYMENT.md docs/RECOVERY.md docs/TOOL_USE_CASES.md reviews/issue-70-codex-mcp-launch-spec.md
+mdl AGENTS.md ARCHITECTURE.md CHANGELOG.md MIGRATION.md README.md SPEC.md docs/DEPLOYMENT.md docs/PLUGIN_DEPLOYMENT.md docs/RECOVERY.md docs/TOOL_USE_CASES.md reviews/issue-70-codex-mcp-launch-spec.md
 ```
 
 ## Risks and mitigations
@@ -151,6 +158,17 @@ mdl AGENTS.md ARCHITECTURE.md CHANGELOG.md IMPLEMENTATION_PROMPT.md MIGRATION.md
 
 Required fresh read-only Claude Code plan review: model `sonnet`, effort
 `medium`, because this is a cross-component packaged Plugin/Codex-host
-contract with end-to-end and authority-boundary implications. Review outcome,
-attempts, evidence, and any resolved findings will be recorded here before
-implementation.
+contract with end-to-end and authority-boundary implications.
+
+Initial review: `FINDINGS`, model `sonnet`, effort `medium`, three invocation
+attempts (one format-only no-output attempt, one timed-out broad review, and
+one substantive review). Evidence: Claude verified `409c4dc`, `v0.4.5`, the
+literal manifest token, and the pre-expanding packaging test. It found no
+Critical or High findings; one Medium finding required explicit reconciliation
+of the real Codex-host integration check with the offline-test rule, and two
+Low findings identified the nonexistent `IMPLEMENTATION_PROMPT.md` lint path
+and imprecise §12.6/§12.7 citations. This revision resolves all three: it
+records issue #70's explicit local Codex integration authorization, separates
+that check from the offline default, removes the stale lint path, and narrows
+the applicable authority citations. Because test strategy changed materially,
+the Project Spec Gate remains `Drafting` and a fresh review is required.
